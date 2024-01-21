@@ -3,7 +3,7 @@
 Sentinex is a comprehensive deep learning library that aims to provide an intuitive *object oriented api* that is accelerated using JAX primitives.
 
 Sentinex aims to provide a simplied and intuitive api that doesn't increase programming fatigue, when developing models. It offers low level abstractions like ``sx.Module``, while offering higher level subclasses like ``nn.Layers``,
-``nn.Model``, ``nn.Activation``, ``nn.Initializers``, ``nn.Losses``, etc. Since everything is a PyTree, it is compatible with a wide variety of JAX ecosystem tools, like Optax, Equinox, Keras, and so much more.
+``nn.Model``, ``nn.Activation``, ``nn.Initializers``, ``nn.Losses``, etc. Since everything is a PyTree, it is compatible with a wide variety of JAX ecosystem tools, like [Optax](www.google.com), Equinox, Keras, and so much more.
 
 # Sharp Bits:
 Currently, Sentinex is an immature framework that heavily utilizes external libraries for many core features. For example, Equinox is used to supply many of the filtered/lifted transformations, while Optax optimizers have been wrapped for extra-convenience.
