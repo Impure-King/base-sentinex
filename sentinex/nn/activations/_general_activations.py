@@ -1,5 +1,5 @@
 from random import randint
-from typing import Any, Optional
+from typing import Any, Optional, Self
 
 import jax.numpy as jnp
 from jax.numpy import float32, maximum, minimum, zeros_like
@@ -24,13 +24,26 @@ __all__ = ["Activation",
 
 
 class Activation(Module):
+    """A activation class that can be subclassed to create custom activations,
+    while retaining prebuilt methods.
 
-    def __init__(self, name: str | None = "Activation") -> None:
+    Args:
+        name (str, optional): The hidden name of activation instance. Defaults to "Activation".
+    """
+    def __init__(self, name: str = "Activation") -> None:
         super().__init__(name)
 
     @classmethod
-    def get_activation(cls, name: str):
-        cls.__activations = {
+    def get_activation(cls, name: str) -> Self:
+        """Returns an activation function, when given a string name.
+
+        Args:
+            name (str): The name of the activation function desired.
+
+        Returns:
+            Self: The corresponding activation function requested.
+        """
+        __activations = {
             "none": lambda x: x,
             "relu": ReLU(),
             "heaviside": Heaviside(),
@@ -46,15 +59,21 @@ class Activation(Module):
             "softmax": Softmax(),
             "mish": Mish()
         }
-        activations = cls.__activations
-        return activations[name.lower()]
+        return __activations[str(name).lower()]
 
 
 class ReLU(Activation):
+    """A Rectified Linear Unit Function that 
+    Args:
+        max_value (float, optional): Specifies the maximum value of the output. Defaults to None.
+        negative_slope (float, optional): _description_. Defaults to 0.0.
+        threshold (float, optional): _description_. Defaults to 0.0.
+        name (str, optional): The hidden name of the activation instance. Defaults to "ReLU".
+    """
     def __init__(self,
-                 max_value=None,
-                 negative_slope=0.0,
-                 threshold=0.0,
+                 max_value: float|None = None,
+                 negative_slope: float = 0.0,
+                 threshold: float = 0.0,
                  name="ReLU",
                  **kwargs):
         super().__init__(name=name,
@@ -83,7 +102,7 @@ class Heaviside(Activation):
 class LeakyReLU(Activation):
     def __init__(self,
                  alpha=1e-3,
-                 name: str | None = "LeakyReLU",
+                 name: str = "LeakyReLU",
                  **kwargs) -> None:
         super().__init__(name,
                          **kwargs)
@@ -97,7 +116,7 @@ class RandomReLU(LeakyReLU):
     def __init__(self,
                  alpha_min=0.001,
                  alpha_max=0.3,
-                 name: str | None = "RandomReLU",
+                 name: str = "RandomReLU",
                  seed: int = randint(1, 100),
                  **kwargs) -> None:
         alpha = float(uniform(PRNGKey(seed), (1,),
@@ -110,7 +129,7 @@ class RandomReLU(LeakyReLU):
 class ELU(Activation):
     def __init__(self,
                  alpha: float = 1e-3,
-                 name: str | None = "ELU",
+                 name: str = "ELU",
                  seed: int = randint(1, 100),
                  **kwargs) -> None:
         super().__init__(
@@ -125,7 +144,7 @@ class ELU(Activation):
 
 
 class SELU(ELU):
-    def __init__(self, name: str | None = "SELU", seed: int = randint(1, 100), **kwargs) -> None:
+    def __init__(self, name: str = "SELU", seed: int = randint(1, 100), **kwargs) -> None:
         super().__init__(alpha=1.67, name=name, seed=seed, **kwargs)
 
     def __call__(self, x):
@@ -133,7 +152,7 @@ class SELU(ELU):
 
 
 class Sigmoid(Activation):
-    def __init__(self, name: str | None = "Sigmoid", **kwargs) -> None:
+    def __init__(self, name: str = "Sigmoid", **kwargs) -> None:
         super().__init__(name, **kwargs)
 
     def __call__(self, x):
@@ -141,7 +160,7 @@ class Sigmoid(Activation):
 
 
 class Swish(Activation):
-    def __init__(self, beta: float = 1.702, trainable = False, name: str | None = "Swish", **kwargs) -> None:
+    def __init__(self, beta: float = 1.702, trainable = False, name: str = "Swish", **kwargs) -> None:
         super().__init__(name, **kwargs)
         self.sigmoid = Sigmoid()
         self.beta = beta
@@ -153,7 +172,7 @@ class Swish(Activation):
 
 
 class Tanh(Activation):
-    def __init__(self, name: str | None = "Tanh", **kwargs) -> None:
+    def __init__(self, name: str = "Tanh", **kwargs) -> None:
         super().__init__(name, **kwargs)
 
     def __call__(self, x):
@@ -166,7 +185,7 @@ class SiLU(Swish):
 
 
 class Softmax(Activation):
-    def __init__(self, name: str | None = "Softmax", **kwargs) -> None:
+    def __init__(self, name: str = "Softmax", **kwargs) -> None:
         super().__init__(name, **kwargs)
 
     def __call__(self, x):
@@ -174,7 +193,7 @@ class Softmax(Activation):
 
 
 class Softplus(Activation):
-    def __init__(self, name: str | None = "Softplus", **kwargs) -> None:
+    def __init__(self, name: str = "Softplus", **kwargs) -> None:
         super().__init__(name, **kwargs)
 
     def __call__(self, x):
@@ -182,7 +201,7 @@ class Softplus(Activation):
 
 
 class Mish(Activation):
-    def __init__(self, name: str | None = "Mish", **kwargs) -> None:
+    def __init__(self, name: str = "Mish", **kwargs) -> None:
         super().__init__(name, **kwargs)
         self.softplus = Softplus()
         self.tanh = Tanh()

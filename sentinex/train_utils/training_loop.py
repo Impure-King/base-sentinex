@@ -2,7 +2,7 @@ from termcolor import colored
 
 def batch_print(total_batches, current_batch, loss, metric=None, val_loss=None, val_metric=None):
   # Loading Handling:
-  length = 30
+  length = 20
   filled_length = int(length * current_batch // total_batches)
   bar = colored('─', "green") * filled_length + \
     colored('─', "yellow") * (length - filled_length)

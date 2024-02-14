@@ -20,10 +20,8 @@ install_requires = [
     "jaxtyping",
     "optax",
     "equinox",
-    "jax-dataloader",
-    "tensorflow-datasets",
     "termcolor",
-    "keras-core",
+    "keras"
 ]
 
 tests_require = [
@@ -48,7 +46,7 @@ tests_require = [
 ]
 
 setup(
-    name="tensorwrap",
+    name="sentinex",
     version=__version__,
     description="Sentinex: A high level interface aimed towards rapid prototyping and intuitive workflow for JAX.",
     long_description="\n\n".join([README]),
@@ -57,7 +55,7 @@ setup(
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Education",
         "Intended Audience :: Science/Research",
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
     keywords="",

@@ -1,16 +1,15 @@
 from typing import Any
 
-import jax
+from jaxtyping import Array
 
-from sentinex.nn.activations.base_activations import Activation
-from sentinex.nn.initializers.base_initializer import Initializer
+from sentinex.nn.activations._general_activations import Activation
+from sentinex.nn.initializers._initializer import Initializer
 from sentinex.nn.layers.base_layer import Layer
-from equinox import filter_jit
 
 __all__ = ["Dense", "Linear"]
 
 class Dense(Layer):
-  """A Basic Linear layer that applies a linear transformation to all the inputs.
+  """A basic Dense layer that applies a linear transformation to all the inputs.
 
   Args:
       units (int): Specifies the dimensionality of the output tensor.
@@ -29,7 +28,8 @@ class Dense(Layer):
   """
   
   # Defining annotations:
-  kernel: jax.Array
+  kernel: Array
+  
   def __init__(self, 
               units:int,
               activation:Any=None,
@@ -41,7 +41,7 @@ class Dense(Layer):
               kernel_constraint: str | None = None,
               bias_constraint: str | None = None,
               name:str = "Dense",
-              **kwargs):
+              **kwargs) -> None:
     super().__init__(name,
                      **kwargs)
     
@@ -76,7 +76,7 @@ class Dense(Layer):
       raise ValueError(f"Layer {self.name}"
                        f"Argument ``units`` must be greater than 0. Current value {units}")
 
-  def build(self, input, *args, **kwargs):
+  def build(self, input: Array, *args, **kwargs) -> None:
     """Builds the variables of the layer.
 
     Args:
@@ -90,35 +90,62 @@ class Dense(Layer):
     if self.use_bias:
       self.bias = self.add_param((self.units,),
                                self.bias_initializer)
-      self.set_annotation("bias", jax.Array)
+      self.set_annotation("bias", Array)
 
 
-  def call(self, x):
+  def call(self, x: Array) -> Array:
+    """Performs forward computation with a linear transformation. It also
+    applies the activation function after transformation.
+
+    Args:
+        x (Array): The inputs of the computation.
+
+    Returns:
+        Array: The linearly transformed inputs.
+    """
     if not self.use_bias:
-      return self.activation(x @ self.kernel)
-    return self.activation(x @ self.kernel + self.bias)
+      return self.activation(x @ self.kernel) #type: ignore
+    
+    return self.activation(x @ self.kernel + self.bias) #type: ignore
 
 
 class Linear(Layer):
-  kernel: jax.Array
+  """A basic Linear layer that applies a linear transformation to all the inputs.
+
+  Args:
+      in_shape (int): The input dimensionality.
+      out_shape (int): The output dimensionality.
+      activation (Any, optional): The activation function to apply after transformation. Defaults to None.
+      use_bias (bool, optional): Specifies whether to use or define the bias parameter. Defaults to True.
+      kernel_initializer (str | Initializer, optional): Initializer for the kernel. Defaults to 'glorot_uniform'.
+      bias_initializer (str | Initializer, optional): Initializer for the bias. Defaults to 'zeros'.
+      kernel_regularizer (str | None, optional): Regularizer for the kernel. Defaults to None.
+      bias_regularizer (str | None, optional): Regularizer for the bias. Defaults to None.
+      kernel_constraint (str | None, optional): Constraint for the kernel. Defaults to None.
+      bias_constraint (str | None, optional): Constraint for the bias. Defaults to None.
+      name (str, optional): The name of the layer. Defaults to "Dense".
+
+  Raises:
+      ValueError: Occurs when incorrect types values are passed in.
+  """
+  
+  kernel: Array
+  
   def __init__(self,
-              in_shape:int, 
-              out_shape:int,
-              activation:Any=None,
-              use_bias:bool=True,
-              kernel_initializer='glorot_uniform',
-              bias_initializer='zeros',
-              kernel_regularizer=None,
-              bias_regularizer=None,
-              kernel_constraint=None,
-              bias_constraint=None,
-              name:str = "Linear",
-              *args,
-              **kwargs):
+              in_shape: int, 
+              out_shape: int,
+              activation: Any = None,
+              use_bias: bool = True,
+              kernel_initializer: str | Initializer = 'glorot_uniform',
+              bias_initializer: str | Initializer = 'zeros',
+              kernel_regularizer: str | None = None,
+              bias_regularizer: str | None = None,
+              kernel_constraint: str | None = None,
+              bias_constraint: str | None = None,
+              name: str = "Linear",
+              **kwargs) -> None:
     super().__init__(name,
-                     *args,
                      **kwargs)
-    
     # Defining all the variables:
     self.in_shape = in_shape
     self.out_shape = out_shape
@@ -165,13 +192,13 @@ class Linear(Layer):
     if self.use_bias:
       self.bias = self.add_param((self.out_shape,),
                                self.bias_initializer)
-      self.set_annotation("bias", jax.Array)
+      self.set_annotation("bias", Array)
 
 
   def call(self, x):
     if not self.use_bias:
-      return self.activation(x @ self.kernel)
-    return self.activation(x @ self.kernel + self.bias)
+      return self.activation(x @ self.kernel) #type: ignore
+    return self.activation(x @ self.kernel + self.bias) #type: ignore
 
 Dense.__module__ = "sentinex.nn"
 Linear.__module__ = "sentinex.nn"

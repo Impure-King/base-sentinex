@@ -1,10 +1,13 @@
 """Sentinex's Base API"""
 
 # JAX based imports:
+import os
 
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = '3'
+
+from equinox import *
 from jax import *
 from jax.numpy import *
-from equinox import *
 
 global_list_deletion = ["nn",
                         "experimental",
@@ -24,6 +27,8 @@ for i in global_list_deletion:
     if i in globals():
         del globals()[i]
 
+
+# Importing jax_dataloader data api:
 import jax_dataloader as data
 from jax.numpy import arange as range
 from jax.numpy import array as tensor
@@ -36,6 +41,6 @@ from jax.numpy import minimum as multi_array_min
 from sentinex import core, modelzoo, nn, pytree, train_utils
 from sentinex.core import config
 from sentinex.core.config import device_put
-from sentinex.core.custom_ops import randn, randu
-from sentinex.module import Module
+from sentinex.core.custom_ops import *
+from sentinex.module import *
 from sentinex.version import __version__

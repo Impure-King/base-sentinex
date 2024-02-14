@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import jax_dataloader as jdl
 import optax
 from termcolor import colored
+from ..optimizers.base_optimizers import OptaxOptimizer
 
 from sentinex.module import Module
 
@@ -13,43 +14,38 @@ class TrainState(Module):
     def __init__(self,
                  model,
                  name="TrainState",
-                 trainable=False,
                  *args,
                  **kwargs):
         super().__init__(name,
-                         trainable=trainable,
                          *args,
                          **kwargs)
         self.model = model
 
     def compile(
         self,
-        loss,
-        optimizer,
-        metrics=None
+        loss_fn,
+        optimizer: OptaxOptimizer,
+        metric_fn=None
     ):
-        self.loss = loss
+        self.loss_fn = loss_fn
         self.optimizer = optimizer
-        self.metrics = metrics or loss
-        self.state = optimizer.init(self.model)
+        self.metric_fn = metric_fn or loss_fn
 
         def grad_fn(model,
                     X,
                     y):
-            pred = model(X)
-            return jnp.mean(self.loss(y, pred)), pred
+            pred = model(X, training=True)
+            return jnp.mean(self.loss_fn(y, pred)), pred
 
         self.grad_fn = jax.jit(jax.value_and_grad(grad_fn, has_aux=True))
-        self.freeze("grad_fn")
-        self.train_step = jax.jit(self.train_step)
+        self.jit_train_step = jax.jit(self.train_step)
 
     def train_step(self,
                    model,
                    X,
                    y):
         (loss, pred), grads = self.grad_fn(model, X, y)
-        updates, self.state = self.optimizer.update(grads, self.state, model)
-        model = optax.apply_updates(model, updates)
+        model = self.optimizer.apply_gradients(grads, model)
         return model, loss, pred
 
     def fit(self,
@@ -72,14 +68,15 @@ class TrainState(Module):
                                            drop_last=train_drop_last)
         total_batch_no = len(train_data_loader)
         anim = self.verbosity_setter(verbosity)
-        # train_step = jax.jit(self.train_step)
+        anim_step = total_batch_no//30
         # Training:
         for epoch in range(1, epochs+1):
             print(f"Epoch {epoch}/{epochs}:")
             for batch_no, (X, y) in enumerate(train_data_loader):
-                self.model, loss_val, pred = self.train_step(self.model, X, y)
-                metric_val = self.metrics(y, pred)
-                anim(total_batch_no, batch_no + 1, loss_val, metric_val)
+                self.model, loss_val, pred = self.jit_train_step(self.model, X, y)
+                metric_val = self.metric_fn(y, pred)
+                if (batch_no + 1) % anim_step == 0:
+                    anim(total_batch_no, batch_no + 1, loss_val, metric_val)
             print('\n')
 
     def verbosity_setter(self, verbosity):
@@ -94,7 +91,7 @@ class TrainState(Module):
         print(f"\r Batch {current_batch}/{total_batches} \t\t Loss: {loss:>0.2f} \t\t Metrics: {metric:>0.2f}", end='', sep='')
 
     def loading_animation(self, total_batches, current_batch, loss, metric, val_loss=None, val_metric=None):
-        length = 30
+        length = 20
         filled_length = int(length * current_batch // total_batches)
         bar = colored('─', "green") * filled_length + \
             colored('─', "yellow") * (length - filled_length)

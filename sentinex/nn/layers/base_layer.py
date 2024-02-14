@@ -3,7 +3,7 @@ from jax import Array
 from jax.tree_util import tree_map
 
 from sentinex.module import Module
-from sentinex.nn.initializers.base_initializer import Initializer
+from sentinex.nn.initializers._initializer import Initializer
 
 __all__ = ["Layer"]
 
