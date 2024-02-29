@@ -1,3 +1,4 @@
+from typing import Optional
 import jax
 import jax.numpy as jnp
 import jax_dataloader as jdl
@@ -55,20 +56,36 @@ class TrainState(Module):
             batch_size=None,
             train_shuffle=True,
             train_drop_last=False,
+            validation_data: Optional[list] = None,
+            validation_batch_size = None,
+            validation_shuffle = False,
+            validation_drop_last = False,
             verbosity=1,
             val_data_loader=None):
         # Batching the data:
         train_dataset = jdl.ArrayDataset(X_train, y_train)
-        batch_size = batch_size or (
-            len(train_dataset) if len(train_dataset) < 32 else 32)
+        batch_size = batch_size or (len(train_dataset) if len(train_dataset) < 32 else 32)
+        
         train_data_loader = jdl.DataLoader(train_dataset,
                                            backend="jax",
                                            batch_size=batch_size,
                                            shuffle=train_shuffle,
                                            drop_last=train_drop_last)
-        total_batch_no = len(train_data_loader)
+        
+        train_batch_no = len(train_data_loader)
         anim = self.verbosity_setter(verbosity)
-        anim_step = total_batch_no//30
+        anim_step = train_batch_no//30
+        
+        if validation_data:
+            valid_dataset = jdl.ArrayDataset(*validation_data)
+            validation_batch_size = validation_batch_size or (len(valid_dataset) if len(valid_dataset) < 32 else 32)
+            valid_data_loader = jdl.DataLoader(valid_dataset,
+                                               backend='jax',
+                                               batch_size=validation_batch_size,
+                                               shuffle=validation_shuffle,
+                                               drop_last=validation_drop_last)
+            valid_batch_no = len(valid_data_loader)
+            valid_anim_step = train_batch_no//30
         # Training:
         for epoch in range(1, epochs+1):
             print(f"Epoch {epoch}/{epochs}:")
@@ -76,8 +93,17 @@ class TrainState(Module):
                 self.model, loss_val, pred = self.jit_train_step(self.model, X, y)
                 metric_val = self.metric_fn(y, pred)
                 if (batch_no + 1) % anim_step == 0:
-                    anim(total_batch_no, batch_no + 1, loss_val, metric_val)
+                    anim(train_batch_no, batch_no + 1, loss_val, metric_val)
+            print('')
+            if validation_data:
+                for batch_no, (X, y) in enumerate(valid_data_loader):
+                    pred = self.model(X, training=False)
+                    loss_val = self.loss_fn(y, pred)
+                    metric_val = self.metric_fn(y, pred)
+                    if (batch_no + 1) % valid_anim_step == 0:
+                        anim(valid_batch_no, batch_no + 1, loss_val, metric_val)
             print('\n')
+                
 
     def verbosity_setter(self, verbosity):
         if verbosity == 0:
@@ -106,6 +132,10 @@ class TrainState(Module):
             val_met_str = f" - val_metrics: {val_metric:>.2f}"
         print(f'\rBatch {current_batch}/{total_batches} {bar} - loss: {loss:>.2f} - metric: {metric:>.2f}' + val_loss_str + val_met_str, end='', flush=True)
 
+    def evaluate(self, X_test, y_test):
+        pred = self.model(X_test)
+        return self.loading_animation(1, 1, self.loss_fn(y_test, pred), self.metric_fn(y_test, pred))
+    
     def return_model(self):
         return self.model
 

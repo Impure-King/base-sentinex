@@ -2,7 +2,7 @@ from typing import List, Tuple
 from jaxtyping import Array
 from .base_layer import Layer
 from ..initializers._initializer import Initializer
-from ..activations._general_activations import Activation
+from ..activations._activations import Activation
 import jax
 import jax.numpy as jnp
 

@@ -5,14 +5,16 @@ from equinox import filter_jit, partition, is_array, combine, filter
 import optax
 
 class Optimizer(Module):
-    def __init__(self, name: str | None = "Optimizer") -> None:
-        super().__init__(name)
-        pass
+    def __init__(self, name: str = "Optimizer",
+                 **kwargs) -> None:
+        super().__init__(name=name,
+                         **kwargs)
+        self.apply_gradients = filter_jit(self.apply_gradients)
     
     def update_rule(self, grads, params):
         return NotImplementedError
     
-    @filter_jit
+    # @filter_jit
     def apply_gradients(self, grads, model):
         params, static = partition(model, is_array)
         grad_params, grad_static = partition(grads, is_array)
@@ -23,7 +25,7 @@ class SGD(Optimizer):
     def __init__(self, learning_rate: float = 1e-2,
                  momentum:float = 0.0,
                  nesterov: bool = False,
-                 name: str | None = "SGD") -> None:
+                 name: str = "SGD") -> None:
         super().__init__(name)
         self.learning_rate = learning_rate
         self.nesterov = nesterov
@@ -55,8 +57,10 @@ class OptaxOptimizer(Optimizer):
     Args:
         Module (_type_): _description_
     """
-    def __init__(self, optimizer, params, name: str | None = "OptaxOptimizer") -> None:
-        super().__init__(name)
+    def __init__(self, optimizer, params, name: str = "OptaxOptimizer") -> None:
+        super().__init__(name=name,
+                         dynamic=True,
+                         )
         self.optimizer = optimizer
         self.init(params)
     
@@ -78,7 +82,7 @@ class OptaxSGD(OptaxOptimizer):
                  learning_rate:float = 1e-2,
                  momentum: float = 0.0,
                  nesterov: bool = False,
-                 name: str | None = "OptaxSGD") -> None:
+                 name: str  = "OptaxSGD") -> None:
         optimizer = optax.sgd(learning_rate=learning_rate,
                               momentum=momentum,
                               nesterov=nesterov)
@@ -92,7 +96,7 @@ class OptaxAdam(OptaxOptimizer):
                  b2:float = 1 - 1e-3,
                  eps:float = 1e-8,
                  eps_root: float = 0,
-                 name: str | None = "OptaxAdam") -> None:
+                 name: str = "OptaxAdam") -> None:
         optimizer = optax.adam(learning_rate=learning_rate,
                                b1=b1,
                                b2=b2,

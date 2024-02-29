@@ -1,9 +1,13 @@
 """Sentinex's Neural Network API"""
 
-import optax
+# Importing Optax API:
+from optax import *
+
+# Importing JAX's nn API:
 from jax.nn import *
 
-from sentinex.nn.activations._general_activations import *
+
+from sentinex.nn.activations._activations import *
 from sentinex.nn.initializers._initializer import *
 from sentinex.nn.layers._conv import *
 from sentinex.nn.layers._pool import *

@@ -2,7 +2,7 @@ from typing import Any, Tuple
 import jax.numpy as jnp
 from jax import lax
 from .base_layer import Layer
-from ..activations._general_activations import Activation
+from ..activations._activations import Activation
 
 __all__ = ["Pool", "MaxPool", "MaxPool1D", "MaxPool2D", "MaxPool3D"]
 

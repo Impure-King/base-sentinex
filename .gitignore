@@ -1,3 +1,4 @@
 *.ipynb
 build
 sentinex.egg-info
+tests
