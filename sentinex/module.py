@@ -34,14 +34,15 @@ class Module:
     def __init__(self, 
                  name: str = "Module", 
                  dynamic: bool = False,
-                 trainable: bool = True) -> None:
+                 trainable: bool = True,
+                 **kwargs) -> None:
         self.name: str = f"{name}_{Module._set_name[name]}"; Module._set_name[name] += 1
         
         # Creating instance copy of annotations:
         self._annotations: dict = self._create_annotations()
         
         
-        # Jitting __call__ method:
+        # Accelerating __call__ method:
         self.dynamic: bool = dynamic
         if hasattr(self, "__call__") and dynamic:
             self.__call__ = filter_jit(self.__call__)
@@ -76,7 +77,7 @@ class Module:
         return self._annotations
     
     def set_annotation(self, annotation_name: str, annotation_type: type) -> None:
-        """Modifies the instance annotation, by setting a annotation,
+        """Modifies the instance annotation, by setting an annotation,
         when given annotation_name and annotation_type.
 
         Args:
@@ -86,7 +87,7 @@ class Module:
         self._annotations[annotation_name] = annotation_type
     
     def del_annotation(self, annotation_name: str) -> type:
-        """Deletes the specified instance annotation and returns it's type.
+        """Deletes the specified instance annotation and returns its type.
 
         Args:
             annotation_name (str): The name of the attribute to mark static.
@@ -125,7 +126,7 @@ class Module:
                 leaves.append(instance_dict.pop(x))
             else:
                 print(colored(f"""Warning from {self.name}. 
-                              All type annotated datas should be defined as an attribute. Undefined Annotation: {x}""", "red"))
+                              All type annotated data should be defined as an attribute. Undefined Annotation: {x}""", "red"))
                 
         list(map(flatten_recipe, self.annotations)) # type: ignore        
                 

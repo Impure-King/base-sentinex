@@ -9,12 +9,12 @@ class Optimizer(Module):
                  **kwargs) -> None:
         super().__init__(name=name,
                          **kwargs)
-        self.apply_gradients = filter_jit(self.apply_gradients)
+        # self.apply_gradients = filter_jit(self.apply_gradients)
     
     def update_rule(self, grads, params):
         return NotImplementedError
     
-    # @filter_jit
+    @filter_jit
     def apply_gradients(self, grads, model):
         params, static = partition(model, is_array)
         grad_params, grad_static = partition(grads, is_array)

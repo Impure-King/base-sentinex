@@ -5,6 +5,7 @@ from jaxtyping import Array
 from sentinex.nn.activations._activations import Activation
 from sentinex.nn.initializers._initializer import Initializer
 from sentinex.nn.layers.base_layer import Layer
+import equinox as eq
 
 __all__ = ["Dense"]
 
@@ -92,7 +93,7 @@ class Dense(Layer):
                                self.bias_initializer)
       self.set_annotation("bias", Array)
 
-
+  @eq.filter_jit
   def call(self, x: Array) -> Array:
     """Performs forward computation with a linear transformation. It also
     applies the activation function after transformation.
