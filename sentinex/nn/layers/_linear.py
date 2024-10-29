@@ -71,10 +71,10 @@ class Dense(Layer):
 
     # Performing a few checks:
     if not isinstance(units, int):
-      raise ValueError(f"Layer {self.name}"
+      raise ValueError(f"Layer {self.name}: "
                        f"Argument ``units`` must be an integer, not {type(units)}")
     elif units <= 0:
-      raise ValueError(f"Layer {self.name}"
+      raise ValueError(f"Layer {self.name}: "
                        f"Argument ``units`` must be greater than 0. Current value {units}")
 
   def build(self, input: Array, *args, **kwargs) -> None:
