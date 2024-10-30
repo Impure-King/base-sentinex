@@ -1,6 +1,5 @@
 # Sentinex - A full-fledged Deep Learning Library based on JAX.
 
-| [**Install guide**](#installation)
 
 
 ## Introduction
@@ -56,8 +55,7 @@ Lastly, Sentinex has a varied amount of functions like activation functions, ini
 
 ### Layers
 
-Some of the most basic, yet comprehensive parts of an AI models are its layers. Each layer generally holds __weights__ or a __set of transformations__ that help transform the inputs to the desired output. Let us create Pytorch's Linear layer that 
-performs the following mathematical transformation: $$y = xA^T + B$$
+Some of the most basic, yet comprehensive parts of an AI models are its layers. Each layer generally holds __weights__ or a __set of transformations__ that help transform the inputs to the desired output. Let us create Pytorch's Linear layer that performs the following mathematical transformation: $$y = xA^T + B$$
 
 ```python
 import sentinex as sx
@@ -179,81 +177,73 @@ Through ``nn.Model``, we can skip parameter initialization logic and just focus 
 
 ### Other Examples
 
-1) Custom Layers
+1) Custom Loss Functions
 ```python
-import sentinex as tf
+import sentinex as sx
 from sentinex import nn
 
-class Dense(nn.layers.Layer):
-    def __init__(self, units) -> None:
-        super().__init__() # Needed for tracking trainable_variables.
-        self.units = units # Defining the output shape
-  
-    def build(self, input_shape: tuple) -> None:
-        super().build() # Required for letting model know that layer is built.
-        input_shape = tf.shape(input_shape) # Getting appropriate input shape
-        
-        # Naming each parameter to later access from model.trainable_variables
-        self.kernel = self.add_weights([input_shape, self.units],
-                                       initializer = 'glorot_uniform',
-                                       name='kernel')
-        self.bias = self.add_weights([self.units],
-                                     initializer = 'zeros',
-                                     name='bias')
-        
-    
-    # Use call not __call__ to define the flow. To support JIT compilation, we use staticmethod.
-    @staticmethod
-    @tf.function
-    def call(params, inputs):
-        return inputs @ params['kernel'] + params['bias'] # Using params as an input, allows use to pass in the model.trainable_variables later.
+class MAELoss(nn.Loss):
+    def __init__(self, name="Mean Absolute Error", **kwargs) -> None:
+        super().__init__(name, kwargs)
+        # Can add other attributes for more dynamic loss functions.
+
+    @sx.filter_jit
+    def call(self, y_true, y_pred):
+        return sx.mean(sx.abs(y_true - y_pred))
+
+loss_fn = MAELoss()
+
+array = sx.randn((100, 100))
+loss_fn(array, array)
  ```
 
-2) Just In Time Compiling with tf.function
+We can use a normal function as well, since this loss function is a __pure function__. Normally, classes are more helpful for Categorical Crossentropy.
 ```python
-import sentinex as tf
+import sentinex as sx
 from sentinex import nn
-tf.test.is_device_available(device_type = 'cuda')
 
-@tf.function
-def mse(y_pred, y_true):
-    return tf.mean(tf.square(y_pred - y_true))
+@sx.filter_jit
+def mae(y_pred, y_true):
+    return sx.mean(sx.abs(y_pred - y_true))
 
-print(mse(100, 102))
+array = sx.randn((100, 100))
+print(mae(array, array))
 ```
-3) Custom Models
+2) Custom Activations:
 ```python 
-import sentinex as tf
+import sentinex as sx
 from sentinex import nn
 
-class Sequential(nn.Model):
-    def __init__(self, layers: list) -> None:
-        super().__init__(name = "Sequential") # Starts the tracking of internal variables. Allows for name definition.
-        self.layers = layers
+class ReLU(nn.Activation):
+    def __init__(self, max_value, name="ReLU", **kwargs) -> None:
+        super().__init__(name = "ReLU", **kwargs)
+        self.max_value = max_value
 
-    def __call__(self, inputs):
-        x = inputs
-        for layer in self.layers:
-            x = layer(x)
-        return x
+    @sx.filter_jit
+    def call(self, inputs):
+        sx.array_max(sx.array_min(a, self.max_value), 0)
+        
 
-model = Sequential([
-    nn.layers.Dense(100),
-    nn.layers.Dense(10)
-])
+activation = ReLU(1)
+print(activation(sx.array([-1, 2, 0.1, 3]))) # [0, 1, 0.1, 1]
 ```
 
+3) Wacky Custom Modules:
+If none of my superclasses fit the need, one can use ``sentinex.Module`` to create a PyTree that can fit nearly all other cases. ``sentinex.Module`` is the superclass of all neural network specific superclasses like ``sentinex.nn.Model``, ``sentinex.nn.Layer``, ``sentinex.nn.Activation``, ``sentinex.nn.Initializer``, and etc.
+
+Hence, it is last recommended superclass, only applicable when the idea doesn't fit the scope of typical AI research.
 
 ### Current Gimmicks
-1. Current models are all compiled by JAX's internal jit, so any error may remain a bit more cryptic than PyTorchs. However, this problem is still being worked on.
+There are some gimmicks, due to the nature of classes and JAX's stateless nature of programming. 
+1. Current models are all compiled by JAX's internal jit, so any error may remain a bit more cryptic than PyTorchs. However, this problem is still being worked on. We have provided ``dynamic`` keyword arguments for most superclasses, so one has the option to jit compile or not (``dynamic = True`` helps debugging).
 
-2. Also, using ``sentinex.Module`` is currently not recommended, since other superclasses offer more functionality and ease of use.
+2. Graph execution is currently not available, which means that all exported models can only be deployed within a python environment.
 
-3. Graph execution is currently not available, which means that all exported models can only be deployed within a python environment.
+3. PyPI version is facing some errors in accessing all the functions, so I plan to release a patch that can fix import errors. For now, please download from the source (this GitHub repository).
 
 
 
-### Installation
+### Installation (Install from Source recommended for now)
 
 The device installation of Sentinex depends on its backend, being JAX. Thus, our normal install will be covering only the cpu version. For gpu version, please check [JAX](https://github.com/google/jax)'s documentation.
 
@@ -273,7 +263,7 @@ If any problems occur with cuda installation, please visit the [JAX](https://git
 
 ## Citations
 
-This project have been heavily inspired by __TensorFlow__ and once again, is built on the open-source machine learning XLA framework __JAX__. Therefore, I recognize the authors of JAX and TensorFlow for the exceptional work they have done and understand that my library doesn't profit in any sort of way, since it is merely an add-on to the already existing community.
+This project have been heavily inspired by __TensorFlow__ and once again, is built on the open-source machine learning XLA framework __JAX__. Therefore, I recognize the authors of JAX and TensorFlow for the exceptional work they have done and understand that my library doesn't profit in any sort of way, since it is merely an add-on to the already existing community. __Equinox__ by Patrick Kidger and __JAX Dataloader__ by Hangzhi Guo have graciously allowed me to use some of their functions and their documentation has also aided the development of this project.
 
 ```
 @software{jax2018github,
@@ -282,6 +272,13 @@ This project have been heavily inspired by __TensorFlow__ and once again, is bui
   url = {http://github.com/google/jax},
   version = {0.3.13},
   year = {2018},
+}
+
+@article{kidger2021equinox,
+    author={Patrick Kidger and Cristian Garcia},
+    title={{E}quinox: neural networks in {JAX} via callable {P}y{T}rees and filtered transformations},
+    year={2021},
+    journal={Differentiable Programming workshop at Neural Information Processing Systems 2021}
 }
 ```
 ## Reference documentation
