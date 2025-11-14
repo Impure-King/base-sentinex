@@ -2,3 +2,5 @@
 build
 sentinex.egg-info
 tests
+.vscode/
+*.pyc

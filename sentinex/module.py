@@ -4,7 +4,8 @@ from typing import Optional, Dict, DefaultDict, Self, Tuple, Any
 from equinox import filter_jit
 from jax import tree_util
 from termcolor import colored
-from jax import Array, tree_map
+from jax import Array
+from jax.tree_util import tree_map
 
 __all__ = ["Module"]
 

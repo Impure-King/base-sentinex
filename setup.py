@@ -1,5 +1,3 @@
-"""setup.py for Sentinex"""
-
 import os
 from setuptools import find_packages
 from setuptools import setup
@@ -16,12 +14,15 @@ with open("sentinex/version.py") as f:
   exec(f.read(), globals())
 
 install_requires = [
-    "numpy>=1.12",
-    "jaxtyping",
-    "optax",
-    "equinox",
-    "termcolor",
-    "keras"
+    "jax>=0.7.0",
+    "optax>=0.2.4",
+    "numpy>=2.1.0",
+    "jaxlib>=0.7.0",
+    "equinox>=0.13.0",
+    "termcolor>=3.0.0",
+    "jaxtyping>=0.3.0",
+    # Marked for replacement by Grain
+    "jax-dataloader>=0.1.0",
 ]
 
 tests_require = [
@@ -45,6 +46,10 @@ tests_require = [
     "torch",
 ]
 
+examples_require = [
+    "tensorflow-datasets>=4.9.6" # Required for dataset loading
+]
+
 setup(
     name="sentinex",
     version=__version__,
@@ -55,7 +60,7 @@ setup(
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Education",
         "Intended Audience :: Science/Research",
-        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
     keywords="",
@@ -67,5 +72,6 @@ setup(
     install_requires=install_requires,
     extras_require={
         "testing": tests_require,
+        "examples": examples_require,
         },
     )
