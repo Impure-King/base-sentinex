@@ -76,8 +76,14 @@ uv run python benchmarks/overhead.py
 
 `bench.py` trains an MLP, a CNN and a small transformer with raw JAX + Optax and
 with Voltax in every mode, from the same weights on the same batches. Results go
-to `benchmarks/results/`. The latest numbers and how to read them are in
-[benchmarks/RESULTS.md](benchmarks/RESULTS.md).
+to `benchmarks/results/`. On an Apple M5 (CPU):
+
+* Voltax under `jax.jit` runs within −7% to +3% of hand-written JAX + Optax
+  (about 120k examples/s for a 670k-parameter MLP at batch 512).
+* Graph mode is 25–34% slower than XLA on these steps, and 3x slower on a
+  small-batch step where per-op dispatch dominates. It is 1.2–4.7x faster than eager.
+
+Full tables and how to read them: [benchmarks/RESULTS.md](benchmarks/RESULTS.md).
 
 ## Layout
 

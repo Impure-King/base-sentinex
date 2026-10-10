@@ -1,0 +1,67 @@
+{
+  "environment": {
+    "date": "2026-10-10T16:48:11",
+    "git_commit": "d132355",
+    "git_dirty": true,
+    "python": "3.12.15",
+    "jax": "0.11.2",
+    "jaxlib": "0.11.2",
+    "voltax": "0.2.0",
+    "backend": "cpu",
+    "devices": [
+      "cpu:0"
+    ],
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "cpu": "Apple M5",
+    "cpu_count": 10,
+    "memory_gb": 24.0,
+    "load_average_at_start": [
+      5.94,
+      9.1,
+      20.3
+    ]
+  },
+  "rows": {
+    "mlp": {
+      "trace_s": 0.0272,
+      "passes_s": 0.0335,
+      "kernels": 143,
+      "compile_s_1_thread": 0.684,
+      "compile_s_8_threads": 0.174,
+      "unique_kernels": 94,
+      "jax_jit_trace_lower_s": 0.0164,
+      "jax_jit_compile_s": 0.0619,
+      "cache_hit_overhead_us": 8.24,
+      "arg_leaves": 22
+    },
+    "cnn": {
+      "trace_s": 0.033,
+      "passes_s": 0.0323,
+      "kernels": 185,
+      "compile_s_1_thread": 1.543,
+      "compile_s_8_threads": 0.38,
+      "unique_kernels": 152,
+      "jax_jit_trace_lower_s": 0.0302,
+      "jax_jit_compile_s": 0.2998,
+      "cache_hit_overhead_us": 12.22,
+      "arg_leaves": 28
+    },
+    "transformer": {
+      "trace_s": 0.0569,
+      "passes_s": 0.0595,
+      "kernels": 895,
+      "compile_s_1_thread": 2.194,
+      "compile_s_8_threads": 0.589,
+      "unique_kernels": 255,
+      "jax_jit_trace_lower_s": 0.0724,
+      "jax_jit_compile_s": 0.2968,
+      "cache_hit_overhead_us": 42.04,
+      "arg_leaves": 94
+    }
+  },
+  "load_average_at_end": [
+    5.18408203125,
+    8.83447265625,
+    20.06982421875
+  ]
+}

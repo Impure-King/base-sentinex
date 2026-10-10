@@ -1,0 +1,91 @@
+{
+  "environment": {
+    "date": "2026-10-10T16:48:08",
+    "git_commit": "d132355",
+    "git_dirty": true,
+    "python": "3.12.15",
+    "jax": "0.11.2",
+    "jaxlib": "0.11.2",
+    "voltax": "0.2.0",
+    "backend": "cpu",
+    "devices": [
+      "cpu:0"
+    ],
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "cpu": "Apple M5",
+    "cpu_count": 10,
+    "memory_gb": 24.0,
+    "load_average_at_start": [
+      6.29,
+      9.22,
+      20.4
+    ]
+  },
+  "rows": [
+    {
+      "size": 1000,
+      "ops": 8,
+      "eager_us": 40.84,
+      "jit_us": 3.07,
+      "graph_us": 28.55,
+      "graph_xla_us": 4.37,
+      "graph_us_per_op": 3.569,
+      "eager_us_per_op": 5.105
+    },
+    {
+      "size": 1000,
+      "ops": 64,
+      "eager_us": 330.06,
+      "jit_us": 3.06,
+      "graph_us": 216.72,
+      "graph_xla_us": 4.58,
+      "graph_us_per_op": 3.386,
+      "eager_us_per_op": 5.157
+    },
+    {
+      "size": 1000,
+      "ops": 512,
+      "eager_us": 2604.79,
+      "jit_us": 24.17,
+      "graph_us": 1700.63,
+      "graph_xla_us": 26.22,
+      "graph_us_per_op": 3.322,
+      "eager_us_per_op": 5.087
+    },
+    {
+      "size": 1000000,
+      "ops": 8,
+      "eager_us": 349.29,
+      "jit_us": 59.5,
+      "graph_us": 345.83,
+      "graph_xla_us": 59.24,
+      "graph_us_per_op": 43.229,
+      "eager_us_per_op": 43.661
+    },
+    {
+      "size": 1000000,
+      "ops": 64,
+      "eager_us": 2861.64,
+      "jit_us": 204.79,
+      "graph_us": 2807.37,
+      "graph_xla_us": 212.31,
+      "graph_us_per_op": 43.865,
+      "eager_us_per_op": 44.713
+    },
+    {
+      "size": 1000000,
+      "ops": 512,
+      "eager_us": 28233.04,
+      "jit_us": 5388.46,
+      "graph_us": 31874.49,
+      "graph_xla_us": 5577.35,
+      "graph_us_per_op": 62.255,
+      "eager_us_per_op": 55.143
+    }
+  ],
+  "load_average_at_end": [
+    6.2880859375,
+    9.2216796875,
+    20.40380859375
+  ]
+}

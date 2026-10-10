@@ -52,8 +52,9 @@ in four ways:
 | `vx.function(jit_compile=True)` | same Voltax graph, then evaluated under `jax.jit` so XLA compiles it as one program | runs the one executable |
 
 Under `jax.jit`, `impl` receives JAX tracers, so Voltax ops become part of JAX's
-jaxpr. Voltax adds nothing at run time there: after compilation, Voltax-under-jit
-and hand-written JAX are the same kind of XLA program (the benchmarks check this).
+jaxpr. Voltax adds nothing at run time there: Voltax-under-jit and hand-written JAX
+both become one XLA program, and in the benchmarks they run within −7% to +3% of
+each other.
 
 Graph mode is the interesting part. It is a working model of TensorFlow's
 `tf.function` (without `jit_compile=True`): trace once per signature into a graph,
@@ -155,8 +156,9 @@ its Python body. Calling one inside `jax.jit` or `jax.grad` (arguments are JAX
 tracers) replays the cached Voltax graph through JAX with `interpret`, so graph
 mode composes with JAX transforms.
 
-**Cost of a cache hit.** Flattening and building the key happens in Python, so
-a hit costs microseconds per call. `jax.jit` does the same lookup in C++.
+**Cost of a cache hit.** Flattening and building the key happens in Python: 8 µs
+for the MLP step's 22 argument leaves, 42 µs for the transformer's 94. `jax.jit`
+does the same lookup in C++.
 
 ---
 
@@ -317,9 +319,12 @@ keyed by (primitive, literals, params, input avals). So the second `add` of two
 executable. That is what a TensorFlow kernel registry gives you, except TensorFlow
 ships its kernels precompiled and Voltax compiles them on first use.
 
-Compiling hundreds of small programs one by one took 1.7 s for the MLP step and
-4.3 s for the transformer. XLA compilation releases Python's GIL, so
-`compiled_kernels` compiles missing kernels on a thread pool: 0.2 s and 0.5 s.
+Compiling the MLP step's 94 distinct kernels one by one takes 0.68 s; the
+transformer's 255 take 2.2 s. XLA compilation releases Python's GIL, so
+`compiled_kernels` compiles missing kernels on a thread pool: 0.17 s and 0.59 s.
+That is still slower than `jax.jit` compiling the whole step once (0.06 s and
+0.30 s), because every XLA compile has a fixed cost. TensorFlow doesn't pay this:
+its kernels are compiled C++ shipped with the library.
 
 **The program.** `Executable` turns the graph into a flat list of instructions
 `(kernel, input_slots, output_slot, dead_slots)` over a register file with one
@@ -344,11 +349,12 @@ and fusion means most intermediates never exist at all.
 **Asynchronous dispatch.** Each kernel call returns immediately with a future-like
 `jax.Array`. The Python loop keeps enqueueing while earlier kernels run. With large
 ops, dispatch overhead hides behind compute. With tiny ops (small batches), the
-loop itself is the bottleneck. `benchmarks/overhead.py` measures exactly this.
+loop itself is the bottleneck: about 3.4 µs per op on this machine
+(`benchmarks/overhead.py`).
 
 **Profiling.** `Executable.profile(args)` blocks after every kernel and reports
-time per op type. On the CNN step it shows XLA:CPU's backward convolution and
-max-pool backward taking about 60% of the step.
+time per op type. On the CNN step it shows XLA:CPU's convolution backward kernels
+and the max-pool backward taking 64% of the op time.
 
 **Compared with TensorFlow's executor:** TensorFlow runs its graph from C++, and
 independent ops can run concurrently on an inter-op thread pool. Voltax runs one
@@ -368,13 +374,15 @@ op at a time from Python. Both share the defining property: no cross-op fusion.
 | intermediates | every node's output is written to memory | most live in registers/cache inside fused loops |
 | memory planning | free after last use | buffer assignment and reuse across the whole program |
 | per-step overhead | Python loop: one dispatch per node | one dispatch |
-| first-call cost | trace + passes + compile every *new* kernel (cached across graphs) | trace + compile the whole program (cached per function) |
+| first-call cost | trace + passes + compile every *new* kernel (cached across graphs); 0.2–0.7 s here | trace + compile the whole program (cached per function); 0.1–0.4 s here |
 | what you can inspect | the graph, per-op timings | jaxpr, HLO before/after optimization |
 | `jit_compile=True` | the Voltax graph is evaluated under `jax.jit` and becomes one XLA program | (this is the default) |
 
-The trade-off in one sentence: graph mode removes Python from the hot loop and
-lets you see and transform the graph, but without fusion every op pays a dispatch
-and a full round trip through memory. XLA pays more at compile time to remove both.
+The trade-off in one sentence: graph mode takes your model's Python out of the hot
+loop and lets you see and transform the graph, but without fusion every op pays a
+dispatch and a full round trip through memory. XLA removes both by compiling the
+whole program, and here that one compile is even cheaper than compiling graph
+mode's per-op kernels.
 
 `vx.function(..., jit_compile=True)` shows the graph IR is not tied to the
 executor: the same optimized graph can be lowered to one XLA program, exactly like
@@ -411,10 +419,49 @@ determined by its seed (tested).
 
 ## 10. Benchmarks: what they show
 
-Files: `benchmarks/workloads.py`, `benchmarks/bench.py`, `benchmarks/overhead.py`,
-results in `benchmarks/results/` and `benchmarks/RESULTS.md`.
+Files: `benchmarks/workloads.py` (models, raw JAX baselines), `benchmarks/bench.py`,
+`benchmarks/overhead.py`, `benchmarks/first_call.py`; results in `benchmarks/results/`.
 
-BENCHMARK_SECTION_PLACEHOLDER
+Full tables, method and raw data: [benchmarks/RESULTS.md](../benchmarks/RESULTS.md).
+Everything below is from one run on an Apple M5 (CPU backend, otherwise idle).
+
+Median train-step time (forward + backward + Adam), and change versus raw JAX + Optax:
+
+| workload | raw JAX + Optax | Voltax `jax.jit` | graph → XLA | graph mode | eager |
+|---|---:|---:|---:|---:|---:|
+| MLP 784-512-512-10, batch 512 | 4.26 ms | −0.8% | −2.0% | +31% | +515% |
+| same MLP, batch 32 | 0.71 ms | +1.4% | +2.0% | +204% | +785% |
+| CNN, batch 128 | 20.0 ms | +3.0% | +3.4% | +34% | +61% |
+| transformer, batch 32 × 64 tokens | 25.8 ms | −7.2% | +3.2% | +25% | +97% |
+
+How to read it:
+
+1. **Under `jax.jit`, Voltax is free.** −7% to +3% versus hand-written JAX + Optax: both are one
+   XLA program, and the remaining differences come from equivalent-but-different model code
+   (e.g. one-hot vs gather in the loss). On the transformer no single swapped component explains
+   the 7%; it is XLA fusing two slightly different whole programs differently.
+2. **The Voltax graph loses nothing XLA needs.** Lowered to XLA (`jit_compile=True`) it lands
+   within 4% of raw JAX.
+3. **Op-by-op execution costs 25–34% on these steps, 3x on a tiny one.** Graph mode runs 2–3x more
+   kernels than XLA (143 vs 47 for the MLP, 895 vs 297 for the transformer). On mid-size steps the
+   matmuls and convolutions dominate and cost the same either way. On the batch-32 MLP the
+   dispatches are the step: about 10 µs per kernel.
+4. **Graph mode beats eager by 1.2x to 4.7x**: the model's Python and JAX's op-by-op autodiff are
+   gone from each step. That is the whole case for `tf.function`.
+5. **Fusion is worth up to ~14x on memory-bound chains.** In `benchmarks/overhead.py`, 64
+   elementwise ops on a 4 MB array take 2.8 ms op by op and 0.2 ms fused. On small arrays graph
+   mode pays ~3.4 µs per op of pure dispatch.
+6. **Graph mode's first call is slower than `jax.jit`'s.** Compiling a few hundred tiny kernels
+   costs 0.17–0.59 s (with 8 compile threads; 0.7–2.2 s on one) against 0.08–0.37 s for one
+   whole-program XLA compile, because every compile has fixed overhead. TensorFlow avoids this by
+   shipping precompiled kernels.
+
+What you can claim from this: Voltax under `jax.jit` matches hand-written JAX + Optax on CPU
+(within a few percent, about 120k examples/s for the batch-512 MLP on an M5), and its graph mode
+shows the cost of giving up fusion (25–34% on mid-size CPU steps, 3x when dispatch-bound). What
+you can't claim: GPU numbers. This machine has no CUDA. Fusion and launch overhead usually matter
+more on GPUs, so expect graph mode to fall further behind there, but that is a prediction, not a
+measurement.
 
 ---
 
@@ -493,9 +540,11 @@ whole arrays, and every op pays a dispatch. XLA fuses elementwise chains and pla
 memory for the whole program. See the numbers in section 10 and
 `benchmarks/overhead.py`.
 
-**Then why do graph runtimes exist?** Tracing once removes Python from the step
-(faster than eager), the graph can be inspected, optimized, serialized and run
-without Python, and compile time is small and incremental (kernels are shared).
+**Then why do graph runtimes exist?** Tracing once removes the model's Python from
+the step (1.2x to 4.7x faster than eager here), and the graph can be inspected,
+optimized, serialized and run without Python. With precompiled kernels, as in
+TensorFlow, there is also no compile step at all. Voltax compiles its kernels on
+first use, so its first call is slower than `jax.jit`'s.
 
 **How do you get shapes without running anything?** Abstract evaluation: propagate
 avals through each op's shape rule. Voltax uses `jax.eval_shape` on the kernel.
