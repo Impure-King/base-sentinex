@@ -42,12 +42,13 @@ class ConcreteFunction:
     raw_graph: Graph  # as traced
     graph: Graph  # after optimization passes
     out_tree: Any
-    run: Callable[[list], list]
+    run: Callable[[list], list] | None  # None until compiled
     pass_stats: dict
     trace_seconds: float
     optimize_seconds: float
     compile_seconds: float
-    executable: Executable | None = None
+    executable: Executable | None = None  # graph mode: the op-by-op program
+    xla_executable: Any = None  # jit_compile=True: the single XLA program
 
 
 def _leaf_signature(leaf) -> tuple:
@@ -81,12 +82,10 @@ class Function:
         if current_builder() is not None:
             # Called while tracing another vx.function: just inline the Python body.
             return self._fn(*args, **kwargs)
-        leaves, treedef = jax.tree.flatten((args, kwargs))
-        sig = [_leaf_signature(leaf) for leaf in leaves]
-        key = (treedef, tuple(sig))
+        key, treedef, leaves, sig = self._signature(args, kwargs)
         concrete = self._cache.get(key)
         if concrete is None:
-            concrete = self._cache[key] = self._trace(key, treedef, leaves, sig)
+            concrete = self._cache[key] = self._trace_and_compile(key, treedef, leaves, sig)
         arrays = [leaf for leaf, s in zip(leaves, sig) if s[0] == "array"]
         if any(isinstance(a, jax.core.Tracer) for a in arrays):
             # Inside jax.jit / jax.grad: replay the graph through JAX instead.
@@ -95,8 +94,15 @@ class Function:
             outs = concrete.run(arrays)
         return jax.tree.unflatten(concrete.out_tree, outs)
 
+    @staticmethod
+    def _signature(args, kwargs):
+        leaves, treedef = jax.tree.flatten((args, kwargs))
+        sig = [_leaf_signature(leaf) for leaf in leaves]
+        return (treedef, tuple(sig)), treedef, leaves, sig
+
     # -- tracing ----------------------------------------------------------------
-    def _trace(self, key, treedef, leaves, sig) -> ConcreteFunction:
+    def _build(self, key, treedef, leaves, sig) -> ConcreteFunction:
+        """Trace the Python function on Symbols and optimize the graph (no compile)."""
         name = getattr(self._fn, "__name__", "fn")
         t0 = time.perf_counter()
         builder = GraphBuilder(name)
@@ -113,46 +119,52 @@ class Function:
         t1 = time.perf_counter()
         graph, stats = passes.optimize(raw) if self.optimize else (passes.renumber(raw), {})
         t2 = time.perf_counter()
-        executable = None
-        if self.jit_compile:
-            structs = [n.aval.to_struct() for n in graph.inputs]
-            compiled = jax.jit(functools.partial(interpret, graph)).lower(structs).compile()
-            run = lambda arrays: compiled(arrays)  # noqa: E731
-        else:
-            executable = Executable(graph)
-            run = executable
-        t3 = time.perf_counter()
-
-        self.trace_count += 1
-        if self.trace_count > RETRACE_WARNING_THRESHOLD and not self._warned:
-            self._warned = True
-            warnings.warn(
-                f"vx.function '{name}' has been traced {self.trace_count} times. Each new "
-                "input shape/dtype or Python-scalar value makes a new graph. Pass changing "
-                "numbers as arrays, and keep batch shapes fixed.",
-                stacklevel=3,
-            )
         return ConcreteFunction(
             signature=key,
             raw_graph=raw,
             graph=graph,
             out_tree=out_tree,
-            run=run,
+            run=None,
             pass_stats=stats,
             trace_seconds=t1 - t0,
             optimize_seconds=t2 - t1,
-            compile_seconds=t3 - t2,
-            executable=executable,
+            compile_seconds=0.0,
         )
 
+    def _trace_and_compile(self, key, treedef, leaves, sig) -> ConcreteFunction:
+        concrete = self._build(key, treedef, leaves, sig)
+        graph = concrete.graph
+        t0 = time.perf_counter()
+        if self.jit_compile:
+            structs = [n.aval.to_struct() for n in graph.inputs]
+            compiled = jax.jit(functools.partial(interpret, graph)).lower(structs).compile()
+            concrete.xla_executable = compiled
+            concrete.run = lambda arrays: compiled(arrays)
+        else:
+            concrete.executable = concrete.run = Executable(graph)
+        concrete.compile_seconds = time.perf_counter() - t0
+
+        self.trace_count += 1
+        if self.trace_count > RETRACE_WARNING_THRESHOLD and not self._warned:
+            self._warned = True
+            warnings.warn(
+                f"vx.function '{graph.name}' has been traced {self.trace_count} times. Each new "
+                "input shape/dtype or Python-scalar value makes a new graph. Pass changing "
+                "numbers as arrays, and keep batch shapes fixed.",
+                stacklevel=3,
+            )
+        return concrete
+
     # -- inspection -------------------------------------------------------------
+    def trace(self, *args, **kwargs) -> ConcreteFunction:
+        """Trace and optimize for these arguments without compiling or caching."""
+        return self._build(*self._signature(args, kwargs))
+
     def get_concrete_function(self, *args, **kwargs) -> ConcreteFunction:
-        """The traced specialization for these arguments (traces if needed)."""
-        leaves, treedef = jax.tree.flatten((args, kwargs))
-        sig = [_leaf_signature(leaf) for leaf in leaves]
-        key = (treedef, tuple(sig))
+        """The cached specialization for these arguments (traces and compiles if needed)."""
+        key, treedef, leaves, sig = self._signature(args, kwargs)
         if key not in self._cache:
-            self._cache[key] = self._trace(key, treedef, leaves, sig)
+            self._cache[key] = self._trace_and_compile(key, treedef, leaves, sig)
         return self._cache[key]
 
     def graph(self, *args, **kwargs) -> Graph:

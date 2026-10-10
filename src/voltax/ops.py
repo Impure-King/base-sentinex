@@ -34,10 +34,6 @@ def dtype_of(x) -> np.dtype:
     return np.dtype(x.dtype) if hasattr(x, "dtype") else np.dtype(jnp.result_type(x))
 
 
-def is_float(dt) -> bool:
-    return jnp.issubdtype(dt, jnp.inexact)
-
-
 def _axes(axis, nd: int) -> tuple[int, ...]:
     if axis is None:
         return tuple(range(nd))

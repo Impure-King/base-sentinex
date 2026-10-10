@@ -85,5 +85,5 @@ def test_losses_match_optax():
 
 def test_losses_in_graph_mode():
     logits, labels = rand((4, 5)), jnp.array([0, 1, 4, 2])
-    f = lambda l, y: (losses.cross_entropy(l, y), losses.accuracy(l, y), losses.binary_cross_entropy(l, ops.sigmoid(l)))
+    f = lambda z, y: (losses.cross_entropy(z, y), losses.accuracy(z, y), losses.binary_cross_entropy(z, ops.sigmoid(z)))
     tree_allclose(vx.function(f)(logits, labels), f(logits, labels), rtol=1e-6)
