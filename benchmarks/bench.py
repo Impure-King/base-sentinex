@@ -14,13 +14,16 @@ Modes
 Method
   * Same initial weights and the same sequence of synthetic batches in every mode.
   * First call is timed separately (it includes tracing and compilation).
-  * Then `warmup` steps, then `repeats` timed rounds of `steps` steps per mode.
-    Rounds are interleaved across modes (rotating order), so slow drift such as
-    thermal throttling on a fanless laptop hits every mode about equally.
+  * Then `warmup` steps, then `repeats` timed rounds per mode. Every mode runs the
+    same number of steps per round, chosen so a raw_jax round takes about
+    `round_seconds`. Rounds are interleaved across modes (rotating order), so
+    background load and thermal throttling on a fanless laptop hit every mode
+    about equally. Many short rounds keep that interleaving fine-grained.
   * A round is timed from the first dispatch to block_until_ready on the last
     result, i.e. pipelined training-loop throughput.
-  * Reported: median step time over rounds (and min/max), examples/s from the
-    median, and the final loss so you can see every mode trained identically.
+  * Reported: median and min step time over rounds (and max), examples/s from
+    the median, ratios to raw_jax, and the loss after the first step (identical
+    weights and batch, so it must match across modes) and after the last step.
 """
 
 from __future__ import annotations
@@ -103,22 +106,24 @@ def bench_workload(workload, modes, args) -> dict:
     runners = {m: Runner(workload, m, batches) for m in modes}
     result = {}
     for m, r in runners.items():
-        result[m] = {"first_call_s": round(r.run(1), 4)}
+        result[m] = {"first_call_s": round(r.run(1), 4), "first_step_loss": float(r.loss_of(r.out))}
     timed = [m for m in modes if m != "voltax_eager"]
     for m in timed:
-        runners[m].run(args.warmup)
+        t = runners[m].run(args.warmup) / args.warmup
+        if m == "raw_jax":
+            steps = args.steps or max(3, min(500, round(args.round_seconds / t)))
     rounds = {m: [] for m in modes}
     for rep in range(args.repeats):
         order = timed[rep % len(timed) :] + timed[: rep % len(timed)]
         for m in order:
-            rounds[m].append(runners[m].run(args.steps) / args.steps)
+            rounds[m].append(runners[m].run(steps) / steps)
     if "voltax_eager" in modes:
         r = runners["voltax_eager"]
         r.run(1)
         for _ in range(args.eager_repeats):
             rounds["voltax_eager"].append(r.run(args.eager_steps) / args.eager_steps)
 
-    raw_median = statistics.median(rounds["raw_jax"]) if "raw_jax" in rounds else None
+    raw_median, raw_min = statistics.median(rounds["raw_jax"]), min(rounds["raw_jax"])
     for m in modes:
         med = statistics.median(rounds[m])
         result[m].update(
@@ -126,7 +131,9 @@ def bench_workload(workload, modes, args) -> dict:
             step_ms_min=round(min(rounds[m]) * 1e3, 4),
             step_ms_max=round(max(rounds[m]) * 1e3, 4),
             examples_per_s=round(workload.batch_size / med, 1),
-            slowdown_vs_raw_pct=round((med / raw_median - 1) * 100, 2) if raw_median else None,
+            slowdown_vs_raw_pct=round((med / raw_median - 1) * 100, 2),
+            slowdown_vs_raw_min_pct=round((min(rounds[m]) / raw_min - 1) * 100, 2),
+            steps_per_round=args.eager_steps if m == "voltax_eager" else steps,
             steps_run=runners[m].steps_done,
             final_loss=float(runners[m].loss_of(runners[m].out)),
             rounds_ms=[round(t * 1e3, 4) for t in rounds[m]],
@@ -184,30 +191,34 @@ def to_markdown(report: dict) -> str:
         f"{env['cpu_count']} cores, {env['memory_gb']} GB. Load average (1/5/15 min) at start "
         f"{env['load_average_at_start']}, at end {report['load_average_at_end']}.",
         "",
-        f"Timed rounds: {cfg['repeats']} x {cfg['steps']} steps after {cfg['warmup']} warmup steps "
-        f"(eager: {cfg['eager_repeats']} x {cfg['eager_steps']}). Adam, lr {workloads.LEARNING_RATE}, float32.",
+        f"{cfg['repeats']} interleaved timed rounds per mode after {cfg['warmup']} warmup steps; steps per "
+        f"round sized so a raw_jax round takes ~{cfg['round_seconds']} s (eager: {cfg['eager_repeats']} x "
+        f"{cfg['eager_steps']} steps). Adam, lr {workloads.LEARNING_RATE}, float32, synthetic data.",
         "",
     ]
     for name, w in report["workloads"].items():
         lines += [
             f"## {name}: {w['description']} ({w['params']:,} params)",
             "",
-            "| mode | step ms (median) | min–max | examples/s | vs raw JAX | first call s | kernels/step | final loss |",
-            "|---|---:|---:|---:|---:|---:|---:|---:|",
+            "| mode | step ms median | min | max | examples/s | vs raw (median) | vs raw (min) | first call s | kernels/step | loss step 1 | final loss |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
         for mode, r in w["modes"].items():
             kernels = r.get("kernels_per_step") or r.get("xla_kernels_per_step") or "–"
             vs = "–" if mode == "raw_jax" else f"{r['slowdown_vs_raw_pct']:+.1f}%"
+            vs_min = "–" if mode == "raw_jax" else f"{r['slowdown_vs_raw_min_pct']:+.1f}%"
             lines.append(
-                f"| {mode} | {r['step_ms_median']:.3f} | {r['step_ms_min']:.3f}–{r['step_ms_max']:.3f} | "
-                f"{r['examples_per_s']:,.0f} | {vs} | {r['first_call_s']:.2f} | {kernels} | {r['final_loss']:.5f} |"
+                f"| {mode} | {r['step_ms_median']:.3f} | {r['step_ms_min']:.3f} | {r['step_ms_max']:.3f} | "
+                f"{r['examples_per_s']:,.0f} | {vs} | {vs_min} | {r['first_call_s']:.2f} | {kernels} | "
+                f"{r['first_step_loss']:.6f} | {r['final_loss']:.5f} |"
             )
         lines.append("")
     lines += [
         "kernels/step: for jit modes, XLA's fused kernels in the optimized program; for",
         "voltax_graph, the number of one-op kernels the executor dispatches per step.",
-        "final loss: all non-eager modes ran the same steps on the same batches, so equal",
-        "losses mean they trained identically (eager ran fewer steps).",
+        "loss step 1: same weights, same batch, so it must match across modes. final loss: all",
+        "non-eager modes ran the same steps on the same batches; small float differences between",
+        "fused and unfused kernels can grow over many Adam steps (eager ran fewer steps).",
         "",
     ]
     return "\n".join(lines)
@@ -218,8 +229,9 @@ def main():
     p.add_argument("--workloads", nargs="+", default=list(workloads.WORKLOADS))
     p.add_argument("--modes", nargs="+", default=MODES, choices=MODES)
     p.add_argument("--warmup", type=int, default=10)
-    p.add_argument("--steps", type=int, default=20)
-    p.add_argument("--repeats", type=int, default=9)
+    p.add_argument("--steps", type=int, default=0, help="steps per timed round (0 = size from --round-seconds)")
+    p.add_argument("--round-seconds", type=float, default=0.3)
+    p.add_argument("--repeats", type=int, default=15)
     p.add_argument("--eager-steps", type=int, default=3)
     p.add_argument("--eager-repeats", type=int, default=3)
     p.add_argument("--quick", action="store_true", help="tiny run to check everything works")

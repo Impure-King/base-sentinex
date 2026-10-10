@@ -4,8 +4,8 @@ This explains how Voltax works, why it is built this way, and how its graph mode
 differs from `jax.jit`. It ends with the order to rebuild it in and the questions
 an interviewer is likely to ask.
 
-Read it next to the code. Every section names the file it describes, and most
-files are under 250 lines.
+Read it next to the code. Every section names the file it describes. Graph mode
+is about 1,100 lines across seven files in `src/voltax/graph/`.
 
 ## Contents
 
@@ -168,11 +168,13 @@ A `Graph` is a flat list of `Node`s in topological order, with input nodes and
 output nodes. Each node defines exactly one array (SSA):
 
 ```
-%16 = matmul(%14, %1)                       f32[128,512]
-%17 = add(%16, %0)                          f32[128,512]
-%18 = relu(%17)                             f32[128,512]
-%21 = max(%20) axes=(1,) keepdims=True      f32[128,1]
-%38 = mul(0.1, %33)                         f32[16,4]
+%4 = matmul(%2, %1)                         f32[8,4]
+%5 = add(%4, %0)                            f32[8,4]
+%6 = relu(%5)                               f32[8,4]
+%7 = max(%6) axes=(1,) keepdims=True        f32[8,1]
+...
+%34 = mul(0.1, %31)                         f32[4]
+%35 = sub(%0, %34)                          f32[4]
 ```
 
 A node is `(id, op, inputs, params, aval)`, plus `value` for consts. Inputs are
@@ -270,8 +272,8 @@ After tracing, `passes.optimize` runs four passes. Each returns a new graph.
 | pass | what it does | why it matters here |
 |---|---|---|
 | `forward_identities` | removes the identity nodes autodiff inserted | 6 (MLP) to 30 (transformer) nodes per step |
-| `fold_constants` | evaluates nodes whose inputs are all consts or literals, once, at build time | the gradient seed chain (e.g. `1/n` from a mean) becomes a const; capped at 4096 elements so it never materializes a big broadcast |
-| `cse` | merges nodes with the same (op, inputs, params) by hash-consing | backward rules recompute things like `x > 0`; 20 merges in the transformer step |
+| `fold_constants` | evaluates nodes whose inputs are all consts or literals, once, at build time | the start of the backward pass depends only on the seed: `neg`, `1/n` from the mean, reshapes and a broadcast become consts (5 nodes). Capped at 4096 elements so it never materializes a big broadcast |
+| `cse` | merges nodes with the same (op, inputs, params) by hash-consing | 20 merges in the transformer: each LayerNorm computes `mean(x)` and `x - mean` twice (once for the output, once inside `var`), and the gradient of `centered * centered` produces `g * centered` twice |
 | `dce` | keeps only nodes the outputs need | drops work whose result is never used; in these train steps CSE already removed it all |
 
 Op counts for the benchmark train steps (forward + backward + Adam):

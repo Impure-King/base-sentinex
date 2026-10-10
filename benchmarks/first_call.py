@@ -72,12 +72,12 @@ def main():
     p.add_argument("--workloads", nargs="+", default=["mlp", "cnn", "transformer"])
     p.add_argument("--out", default=None)
     args = p.parse_args()
+    env = environment()  # records the load average before any work
     rows = {}
     for name in args.workloads:
         rows[name] = measure(workloads.WORKLOADS[name]())
         print(name, rows[name], flush=True)
 
-    env = environment()
     stem = args.out or os.path.join(os.path.dirname(__file__), "results", f"{dt.date.today().isoformat()}-{jax.default_backend()}-first-call")
     lines = [
         f"# First-call costs: {env['cpu']} ({env['backend']})",

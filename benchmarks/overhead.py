@@ -55,6 +55,7 @@ def main():
     p.add_argument("--out", default=None)
     args = p.parse_args()
 
+    env = environment()  # records the load average before any work
     rows = []
     for size in (1_000, 1_000_000):
         for n_ops in (8, 64, 512):
@@ -75,7 +76,6 @@ def main():
             rows.append(row)
             print(row, flush=True)
 
-    env = environment()
     stem = args.out or os.path.join(os.path.dirname(__file__), "results", f"{dt.date.today().isoformat()}-{jax.default_backend()}-overhead")
     lines = [
         f"# Per-op overhead: {env['cpu']} ({env['backend']})",
