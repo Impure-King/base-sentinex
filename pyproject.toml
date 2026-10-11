@@ -1,27 +1,81 @@
 [project]
 name = "sentinex"
-version = "0.2.0"
-description = "A small functional deep-learning library on JAX, with an op-by-op graph mode next to jax.jit."
+# Reference implementation, not a release. The "+reference" local version label
+# and the "Private :: Do Not Upload" classifier both make PyPI reject an upload.
+version = "1.0.0.dev0+reference"
+description = "A small functional deep-learning library on JAX, with a tf.function-style graph mode next to jax.jit."
 readme = "README.md"
-requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Aadesh Kumar" }]
+requires-python = ">=3.12"
 dependencies = [
-    "jax>=0.5",
-    "numpy>=1.26",
+    "jax>=0.11",
+    "numpy>=2.0",
 ]
+keywords = ["jax", "deep-learning", "autodiff", "tracing", "graph", "xla", "compiler"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+    "Private :: Do Not Upload",
+]
+
+[project.urls]
+Homepage = "https://github.com/Impure-King/base-sentinex"
+Repository = "https://github.com/Impure-King/base-sentinex"
+Documentation = "https://github.com/Impure-King/base-sentinex/blob/reference/v2/docs/WALKTHROUGH.md"
+Changelog = "https://github.com/Impure-King/base-sentinex/blob/reference/v2/CHANGELOG.md"
+Issues = "https://github.com/Impure-King/base-sentinex/issues"
 
 [dependency-groups]
 dev = [
     "pytest>=8",
     "optax>=0.2",
+    "ruff>=0.6",
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sentinex"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/sentinex",
+    "tests",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I", "UP"]
+ignore = [
+    "E501",  # long lines: tables, messages and URLs read better unwrapped
+    "E731",  # small lambdas as VJP rules and schedules
+    "E701",  # one-line operator methods on Symbol
+    "E702",
+    "B905",  # zip() without strict=; lengths are checked where it matters
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["sentinex"]

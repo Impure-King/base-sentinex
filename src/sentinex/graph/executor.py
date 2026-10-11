@@ -19,7 +19,8 @@ from __future__ import annotations
 
 import collections
 import time
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import jax
 

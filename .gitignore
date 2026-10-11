@@ -6,3 +6,8 @@ __pycache__/
 dist/
 build/
 .DS_Store
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.idea/

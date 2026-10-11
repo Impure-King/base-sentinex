@@ -4,11 +4,10 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from helpers import rand, tree_allclose
 
 import sentinex as sx
 from sentinex import losses, nn, ops
-
-from helpers import rand, tree_allclose
 
 
 def _mlp_loss(params, x, y):

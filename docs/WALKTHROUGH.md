@@ -1,5 +1,7 @@
 # Sentinex walkthrough
 
+This describes the reference implementation on the `reference/v2` branch.
+
 This explains how Sentinex works, why it is built this way, and how its graph mode
 differs from `jax.jit`. It ends with the order to rebuild it in and the questions
 an interviewer is likely to ask.

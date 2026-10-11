@@ -3,11 +3,10 @@
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from helpers import graph_value_and_grad, jax_value_and_grad, rand, tree_allclose, weighted_sum
 
 import sentinex as sx
 from sentinex import ops
-
-from helpers import graph_value_and_grad, jax_value_and_grad, rand, tree_allclose, weighted_sum
 
 # (name, fn, args, argnums to differentiate)
 CASES = [

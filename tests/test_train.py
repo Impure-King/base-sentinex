@@ -4,10 +4,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from helpers import tree_allclose
 
 from sentinex import data, losses, nn, optim, train
-
-from helpers import tree_allclose
 
 
 def _task(kind):

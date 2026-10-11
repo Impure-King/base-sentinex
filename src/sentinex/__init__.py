@@ -15,7 +15,7 @@ from sentinex import data, graph, losses, nn, ops, optim, train
 from sentinex.autodiff import grad, value_and_grad
 from sentinex.graph import Symbol, TracingError, function
 
-__version__ = "0.2.0"
+__version__ = "1.0.0.dev0+reference"
 
 __all__ = [
     "Symbol",

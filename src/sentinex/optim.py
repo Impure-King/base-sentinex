@@ -15,7 +15,8 @@ graph mode like everything else.
 
 from __future__ import annotations
 
-from typing import Any, Callable, NamedTuple
+from collections.abc import Callable
+from typing import Any, NamedTuple
 
 import jax
 import jax.numpy as jnp

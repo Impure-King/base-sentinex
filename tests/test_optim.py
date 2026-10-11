@@ -5,11 +5,10 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 import pytest
+from helpers import rand, tree_allclose
 
 import sentinex as sx
 from sentinex import losses, ops, optim
-
-from helpers import rand, tree_allclose
 
 PAIRS = [
     ("sgd", optim.sgd(0.1), optax.sgd(0.1)),

@@ -1,6 +1,15 @@
 # Sentinex
 
+[![CI](https://github.com/Impure-King/base-sentinex/actions/workflows/ci.yml/badge.svg?branch=reference%2Fv2)](https://github.com/Impure-King/base-sentinex/actions/workflows/ci.yml)
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 A small functional deep-learning library on JAX, with its own graph mode.
+
+> **This branch (`reference/v2`) is a reference implementation.** It is not a
+> release: it is not on PyPI and is not meant to be merged. The next Sentinex
+> release will be rebuilt on `main`. The `sentinex` 0.0.x packages on PyPI are the
+> older object-oriented version.
 
 You write a model once with `sentinex.ops`, `sentinex.nn`, `sentinex.losses` and
 `sentinex.optim`. Then you choose how the training step runs:
@@ -12,12 +21,24 @@ You write a model once with `sentinex.ops`, `sentinex.nn`, `sentinex.losses` and
 | `sx.function` | Sentinex traces the step into **its own graph**, caches it per input signature, and runs it **op by op** (like `tf.function` without `jit_compile`) |
 | `sx.function(jit_compile=True)` | the same Sentinex graph, lowered to XLA as one program |
 
-Graph mode is the reason this repo exists. It has its own tracer, SSA graph IR,
+Graph mode is the point of this branch. It has its own tracer, SSA graph IR,
 symbolic reverse-mode autodiff, optimization passes (constant folding, CSE, DCE)
 and an op-by-op executor, so you can compare it with the jaxpr → XLA path on the
 same model. [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md) explains how it works.
 
-## Quick look
+## Install
+
+Python 3.12+ and JAX 0.11+. Install this branch with pip:
+
+```bash
+pip install "sentinex @ git+https://github.com/Impure-King/base-sentinex@reference/v2"
+```
+
+This installs JAX's CPU build. For a GPU, install a CUDA build of JAX first
+([JAX install guide](https://docs.jax.dev/en/latest/installation.html)); Sentinex
+itself is device-agnostic.
+
+## Quick start
 
 ```python
 import jax
@@ -43,10 +64,9 @@ state, metrics = step(state, (x, y))          # first call traces; later calls r
 print(step.graph(state, (x, y)).pretty())     # the Sentinex graph that runs
 ```
 
-## Setup
+## Development
 
-Needs [uv](https://docs.astral.sh/uv/). JAX runs on CPU here; the code is
-device-agnostic and runs on GPU with a CUDA build of jaxlib.
+With [uv](https://docs.astral.sh/uv/), from a clone of this branch:
 
 ```bash
 uv sync
@@ -57,6 +77,10 @@ uv run pytest
 ```
 
 ```bash
+uv run ruff check .
+```
+
+```bash
 uv run python examples/quickstart.py
 ```
 
@@ -64,14 +88,22 @@ uv run python examples/quickstart.py
 uv run python examples/inspect_graph.py
 ```
 
+Without uv, `pip install -e .` and `pip install pytest optax ruff` work too.
+CI (`.github/workflows/ci.yml`) runs lint, the test suite on CPU for Python
+3.12–3.14, and a build-and-install check of the wheel.
+
 ## Benchmarks
 
 ```bash
-uv run python benchmarks/bench.py --wait-for-idle 3
+uv run python benchmarks/bench.py --wait-for-idle 4
 ```
 
 ```bash
 uv run python benchmarks/overhead.py
+```
+
+```bash
+uv run python benchmarks/first_call.py
 ```
 
 `bench.py` trains an MLP, a CNN and a small transformer with raw JAX + Optax and
@@ -103,7 +135,7 @@ src/sentinex/
   nn/               layers and initializers
   losses.py  optim.py  train.py  data.py
 tests/              pytest suite (ops and gradients vs JAX, optimizers vs Optax, ...)
-benchmarks/         workloads, raw JAX baselines, bench.py, overhead.py, results/
+benchmarks/         workloads, raw JAX baselines, bench.py, overhead.py, first_call.py, results/
 examples/           quickstart.py, inspect_graph.py
 docs/WALKTHROUGH.md design walkthrough
 ```
@@ -113,3 +145,7 @@ docs/WALKTHROUGH.md design walkthrough
 Graph mode has no control-flow primitives (`cond`, `while`, `scan`) and only
 static shapes. The executor runs one op at a time from Python. Layers have no
 mutable state (no BatchNorm). See the walkthrough for the trade-offs.
+
+## Changelog and license
+
+See [CHANGELOG.md](CHANGELOG.md). MIT licensed; see [LICENSE](LICENSE).

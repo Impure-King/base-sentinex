@@ -21,7 +21,8 @@ import dataclasses
 import functools
 import time
 import warnings
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import jax
 import numpy as np

@@ -13,7 +13,8 @@ it, and what makes a run reproducible from its seed.
 
 from __future__ import annotations
 
-from typing import Any, Callable, NamedTuple
+from collections.abc import Callable
+from typing import Any, NamedTuple
 
 import jax
 import jax.numpy as jnp
@@ -33,7 +34,7 @@ class TrainState(NamedTuple):
     key: Any = None  # uint32[2] PRNG key (jax.random.PRNGKey), or None if unused
 
     @classmethod
-    def create(cls, params, optimizer: GradientTransformation, key=None) -> "TrainState":
+    def create(cls, params, optimizer: GradientTransformation, key=None) -> TrainState:
         return cls(params, optimizer.init(params), jnp.zeros([], jnp.int32), key)
 
 

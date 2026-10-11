@@ -4,11 +4,10 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from helpers import rand, tree_allclose
 
 import sentinex as sx
 from sentinex import nn
-
-from helpers import rand, tree_allclose
 
 KEY = jax.random.PRNGKey(0)
 

@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "benchmarks"))
-import workloads  # noqa: E402
+workloads = pytest.importorskip("workloads", reason="benchmarks/ is not part of the sdist")
 
 
 @pytest.mark.parametrize("name", ["mlp", "cnn", "transformer"])

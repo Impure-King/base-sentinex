@@ -2,13 +2,11 @@
 
 import jax.numpy as jnp
 import numpy as np
+from helpers import rand, tree_allclose
 
 import sentinex as sx
 from sentinex import ops
-from sentinex.graph import KernelStats, function
-from sentinex.graph import passes
-
-from helpers import rand, tree_allclose
+from sentinex.graph import KernelStats, function, passes
 
 
 def test_dce_removes_unused_work():

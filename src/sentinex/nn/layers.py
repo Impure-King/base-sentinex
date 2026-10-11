@@ -15,7 +15,8 @@ operators, so the same layer runs eagerly, under `jax.jit`, and in graph mode.
 from __future__ import annotations
 
 import math
-from typing import Any, Callable, Sequence
+from collections.abc import Callable, Sequence
+from typing import Any
 
 import jax
 import jax.numpy as jnp

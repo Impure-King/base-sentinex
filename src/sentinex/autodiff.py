@@ -7,7 +7,7 @@ While a `sx.function` is being traced they run Sentinex's symbolic reverse mode
 
 from __future__ import annotations
 
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
 
 import jax
 import numpy as np

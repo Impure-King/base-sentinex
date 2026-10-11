@@ -6,12 +6,11 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from helpers import rand, tree_allclose
 
 import sentinex as sx
 from sentinex import ops
 from sentinex.graph import TracingError, function
-
-from helpers import rand, tree_allclose
 
 
 def test_traces_once_per_signature():

@@ -15,7 +15,7 @@ what XLA adds on top, and it is the main reason `jax.jit` beats graph mode.
 from __future__ import annotations
 
 import collections
-from typing import Callable
+from collections.abc import Callable
 
 from sentinex.graph.ir import CONST, INPUT, Graph, Literal, Node, aval_of
 

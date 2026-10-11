@@ -13,7 +13,7 @@ That single `if` is what lets one model definition run in every mode.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import jax
 
@@ -34,7 +34,7 @@ class Primitive:
                 return a.builder.record(self, args, params)
         return self.impl(*args, **params)
 
-    def defvjp(self, *rules: Callable | None) -> "Primitive":
+    def defvjp(self, *rules: Callable | None) -> Primitive:
         """Register VJP rules, one per positional input.
 
         A rule is called as `rule(g, out, *inputs, **params)` and returns the

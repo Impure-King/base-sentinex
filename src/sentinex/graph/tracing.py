@@ -34,7 +34,7 @@ def _stack() -> list:
     return _STATE.stack
 
 
-def current_builder() -> "GraphBuilder | None":
+def current_builder() -> GraphBuilder | None:
     stack = _stack()
     return stack[-1] if stack else None
 
@@ -64,7 +64,7 @@ class GraphBuilder:
         self.graph.nodes.append(node)
         return node
 
-    def add_input(self, aval: Aval) -> "Symbol":
+    def add_input(self, aval: Aval) -> Symbol:
         node = self._add(INPUT, (), (("index", len(self.graph.inputs)),), aval)
         self.graph.inputs.append(node)
         return Symbol(node, self)
@@ -84,7 +84,7 @@ class GraphBuilder:
         self._consts[id(value)] = (value, node)  # keep `value` alive so its id stays unique
         return node
 
-    def as_symbol(self, x: Any) -> "Symbol":
+    def as_symbol(self, x: Any) -> Symbol:
         if isinstance(x, Symbol):
             self._check_owner(x)
             return x
@@ -92,10 +92,10 @@ class GraphBuilder:
             x = np.asarray(x)
         return Symbol(self.add_const(x), self)
 
-    def symbol(self, node: Node) -> "Symbol":
+    def symbol(self, node: Node) -> Symbol:
         return Symbol(node, self)
 
-    def record(self, prim, args: tuple, params: dict) -> "Symbol":
+    def record(self, prim, args: tuple, params: dict) -> Symbol:
         """Append `prim(*args, **params)` to the graph and return its Symbol."""
         if self.closed or current_builder() is not self:
             raise TracingError(
@@ -118,7 +118,7 @@ class GraphBuilder:
             return self.add_const(a)
         raise TypeError(f"{prim.name}: unsupported argument of type {type(a).__name__}")
 
-    def _check_owner(self, s: "Symbol"):
+    def _check_owner(self, s: Symbol):
         if s.builder is not self:
             raise TracingError("a Symbol from a different trace was used; Symbols cannot cross traces")
 
@@ -133,7 +133,7 @@ def _ops():
     return ops
 
 
-def _concrete_error(sym: "Symbol", what: str) -> TracingError:
+def _concrete_error(sym: Symbol, what: str) -> TracingError:
     return TracingError(
         f"cannot convert traced Symbol {sym.aval} to {what}. Graph mode traces the "
         "function once per input signature, so array values are unknown during tracing. "
