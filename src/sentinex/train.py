@@ -7,7 +7,7 @@
         state, metrics = step(state, batch)
 
 The step is pure: everything that changes (params, optimizer state, step count,
-RNG key) goes in and comes out. That is what lets jax.jit and vx.function cache
+RNG key) goes in and comes out. That is what lets jax.jit and sx.function cache
 it, and what makes a run reproducible from its seed.
 """
 
@@ -18,10 +18,10 @@ from typing import Any, Callable, NamedTuple
 import jax
 import jax.numpy as jnp
 
-from voltax import ops
-from voltax.autodiff import value_and_grad
-from voltax.graph.function import function
-from voltax.optim import GradientTransformation, apply_updates
+from sentinex import ops
+from sentinex.autodiff import value_and_grad
+from sentinex.graph.function import function
+from sentinex.optim import GradientTransformation, apply_updates
 
 MODES = ("eager", "jit", "graph", "graph_xla")
 

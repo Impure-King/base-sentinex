@@ -1,4 +1,4 @@
-"""Training-step throughput: raw JAX + Optax vs Voltax in each run mode.
+"""Training-step throughput: raw JAX + Optax vs Sentinex in each run mode.
 
     uv run python benchmarks/bench.py                 # full run, writes benchmarks/results/
     uv run python benchmarks/bench.py --quick         # smoke test
@@ -6,10 +6,10 @@
 
 Modes
   raw_jax           hand-written jnp/lax model + optax.adam, whole step in jax.jit
-  voltax_jit        Voltax model/loss/optimizer, whole step in jax.jit
-  voltax_graph_xla  vx.function(step, jit_compile=True): Voltax graph -> one XLA program
-  voltax_graph      vx.function(step): Voltax graph, run op by op (one XLA kernel per node)
-  voltax_eager      no compilation of the step; every op dispatched from Python
+  sentinex_jit        Sentinex model/loss/optimizer, whole step in jax.jit
+  sentinex_graph_xla  sx.function(step, jit_compile=True): Sentinex graph -> one XLA program
+  sentinex_graph      sx.function(step): Sentinex graph, run op by op (one XLA kernel per node)
+  sentinex_eager      no compilation of the step; every op dispatched from Python
 
 Method
   * Same initial weights and the same sequence of synthetic batches in every mode.
@@ -44,9 +44,9 @@ import jax
 sys.path.insert(0, os.path.dirname(__file__))
 import workloads  # noqa: E402
 
-import voltax  # noqa: E402
+import sentinex  # noqa: E402
 
-MODES = ["raw_jax", "voltax_jit", "voltax_graph_xla", "voltax_graph", "voltax_eager"]
+MODES = ["raw_jax", "sentinex_jit", "sentinex_graph_xla", "sentinex_graph", "sentinex_eager"]
 _NON_KERNEL = {"parameter", "constant", "tuple", "get-tuple-element", "bitcast"}
 
 
@@ -65,7 +65,7 @@ class Runner:
         if mode == "raw_jax":
             self.state, self.step, self.loss_of = workload.raw_step()
         else:
-            self.state, self.step, self.loss_of = workload.voltax_step(mode.removeprefix("voltax_"))
+            self.state, self.step, self.loss_of = workload.sentinex_step(mode.removeprefix("sentinex_"))
         self.steps_done = 0
         self.out = None
 
@@ -80,10 +80,10 @@ class Runner:
 
     def details(self) -> dict:
         batch = self.batches[0]
-        if self.mode in ("raw_jax", "voltax_jit"):
+        if self.mode in ("raw_jax", "sentinex_jit"):
             text = self.step.lower(self.state, batch).compile().as_text()
             return {"xla_kernels_per_step": count_hlo_kernels(text)}
-        if self.mode.startswith("voltax_graph"):
+        if self.mode.startswith("sentinex_graph"):
             cf = self.step.get_concrete_function(self.state, batch)
             d = {
                 "graph_ops_traced": cf.pass_stats["traced"],
@@ -107,7 +107,7 @@ def bench_workload(workload, modes, args) -> dict:
     result = {}
     for m, r in runners.items():
         result[m] = {"first_call_s": round(r.run(1), 4), "first_step_loss": float(r.loss_of(r.out))}
-    timed = [m for m in modes if m != "voltax_eager"]
+    timed = [m for m in modes if m != "sentinex_eager"]
     for m in timed:
         t = runners[m].run(args.warmup) / args.warmup
         if m == "raw_jax":
@@ -117,11 +117,11 @@ def bench_workload(workload, modes, args) -> dict:
         order = timed[rep % len(timed) :] + timed[: rep % len(timed)]
         for m in order:
             rounds[m].append(runners[m].run(steps) / steps)
-    if "voltax_eager" in modes:
-        r = runners["voltax_eager"]
+    if "sentinex_eager" in modes:
+        r = runners["sentinex_eager"]
         r.run(1)
         for _ in range(args.eager_repeats):
-            rounds["voltax_eager"].append(r.run(args.eager_steps) / args.eager_steps)
+            rounds["sentinex_eager"].append(r.run(args.eager_steps) / args.eager_steps)
 
     raw_median, raw_min = statistics.median(rounds["raw_jax"]), min(rounds["raw_jax"])
     for m in modes:
@@ -133,7 +133,7 @@ def bench_workload(workload, modes, args) -> dict:
             examples_per_s=round(workload.batch_size / med, 1),
             slowdown_vs_raw_pct=round((med / raw_median - 1) * 100, 2),
             slowdown_vs_raw_min_pct=round((min(rounds[m]) / raw_min - 1) * 100, 2),
-            steps_per_round=args.eager_steps if m == "voltax_eager" else steps,
+            steps_per_round=args.eager_steps if m == "sentinex_eager" else steps,
             steps_run=runners[m].steps_done,
             final_loss=float(runners[m].loss_of(runners[m].out)),
             rounds_ms=[round(t * 1e3, 4) for t in rounds[m]],
@@ -157,7 +157,7 @@ def environment() -> dict:
         "python": platform.python_version(),
         "jax": jax.__version__,
         "jaxlib": getattr(jax.lib, "__version__", None) or sh(sys.executable, "-c", "import jaxlib; print(jaxlib.__version__)"),
-        "voltax": voltax.__version__,
+        "sentinex": sentinex.__version__,
         "backend": jax.default_backend(),
         "devices": [str(d) for d in jax.devices()],
         "platform": platform.platform(),
@@ -183,7 +183,7 @@ def wait_for_idle(max_load: float, timeout_s: float):
 def to_markdown(report: dict) -> str:
     env, cfg = report["environment"], report["config"]
     lines = [
-        f"# Voltax benchmark: {env['cpu']} ({env['backend']})",
+        f"# Sentinex benchmark: {env['cpu']} ({env['backend']})",
         "",
         f"{env['date']} · commit {env['git_commit']}{' (dirty)' if env['git_dirty'] else ''} · "
         f"JAX {env['jax']} · Python {env['python']} · {env['platform']}",
@@ -215,7 +215,7 @@ def to_markdown(report: dict) -> str:
         lines.append("")
     lines += [
         "kernels/step: for jit modes, XLA's fused kernels in the optimized program; for",
-        "voltax_graph, the number of one-op kernels the executor dispatches per step.",
+        "sentinex_graph, the number of one-op kernels the executor dispatches per step.",
         "loss step 1: same weights, same batch, so it must match across modes. final loss: all",
         "non-eager modes ran the same steps on the same batches; small float differences between",
         "fused and unfused kernels can grow over many Adam steps (eager ran fewer steps).",

@@ -5,8 +5,8 @@ dtype, and every op applied to it is appended to the active `GraphBuilder` inste
 of being computed. When the function returns, the builder holds the whole graph.
 
 This is the same idea as JAX's tracers or TensorFlow's symbolic tensors. The
-difference from JAX: here the recording is done by Voltax code you can read in one
-file, and the result is Voltax's own `Graph`, not a jaxpr.
+difference from JAX: here the recording is done by Sentinex code you can read in one
+file, and the result is Sentinex's own `Graph`, not a jaxpr.
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from typing import Any
 import jax
 import numpy as np
 
-from voltax.graph import kernels
-from voltax.graph.ir import CONST, INPUT, Aval, Graph, Literal, Node, aval_of
+from sentinex.graph import kernels
+from sentinex.graph.ir import CONST, INPUT, Aval, Graph, Literal, Node, aval_of
 
 
 class TracingError(Exception):
@@ -76,8 +76,8 @@ class GraphBuilder:
             return hit[1]
         if isinstance(value, jax.core.Tracer):
             raise TracingError(
-                "a JAX tracer reached a Voltax graph. Don't call a vx.function's Python "
-                "body inside jax.jit/grad; call the vx.function itself instead."
+                "a JAX tracer reached a Sentinex graph. Don't call a sx.function's Python "
+                "body inside jax.jit/grad; call the sx.function itself instead."
             )
         array = jax.numpy.asarray(value)
         node = self._add(CONST, (), (), aval_of(array), array)
@@ -128,7 +128,7 @@ class GraphBuilder:
 
 
 def _ops():
-    from voltax import ops  # late import: ops imports this module
+    from sentinex import ops  # late import: ops imports this module
 
     return ops
 
@@ -137,7 +137,7 @@ def _concrete_error(sym: "Symbol", what: str) -> TracingError:
     return TracingError(
         f"cannot convert traced Symbol {sym.aval} to {what}. Graph mode traces the "
         "function once per input signature, so array values are unknown during tracing. "
-        "Use vx.ops.where instead of Python if/else on arrays, or pass the value as a "
+        "Use sx.ops.where instead of Python if/else on arrays, or pass the value as a "
         "Python scalar so it becomes part of the signature."
     )
 

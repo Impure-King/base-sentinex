@@ -11,7 +11,7 @@ import time
 import jax
 import numpy as np
 
-from voltax import data, losses, nn, optim, train
+from sentinex import data, losses, nn, optim, train
 
 
 def make_dataset(n=3000, seed=0):

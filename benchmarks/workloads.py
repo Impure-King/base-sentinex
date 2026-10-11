@@ -1,8 +1,8 @@
-"""Benchmark workloads: each model in Voltax and in raw JAX + Optax.
+"""Benchmark workloads: each model in Sentinex and in raw JAX + Optax.
 
-The raw JAX versions are written the way you would write them without Voltax
+The raw JAX versions are written the way you would write them without Sentinex
 (jnp / lax / jax.nn / optax, `jax.jit` on the whole step). They consume the same
-parameter pytree as the Voltax model so both start from identical weights, and
+parameter pytree as the Sentinex model so both start from identical weights, and
 tests/test_benchmark_parity.py checks that both compute the same function.
 """
 
@@ -18,7 +18,7 @@ import numpy as np
 import optax
 from jax import lax
 
-from voltax import losses, nn, optim, train
+from sentinex import losses, nn, optim, train
 
 LEARNING_RATE = 1e-3
 
@@ -36,8 +36,8 @@ class Workload:
     def init_params(self):
         return self.model.init(jax.random.PRNGKey(0), self.input_shape)
 
-    # -- Voltax ---------------------------------------------------------------
-    def voltax_step(self, mode: str):
+    # -- Sentinex ---------------------------------------------------------------
+    def sentinex_step(self, mode: str):
         opt = optim.adam(LEARNING_RATE)
 
         def loss_fn(params, batch, key):

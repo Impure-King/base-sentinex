@@ -6,7 +6,7 @@ This is what TensorFlow's `tf.gradients` does in graph mode. JAX instead
 differentiates while tracing (JVP + transpose on the jaxpr); the result is the
 same kind of thing, a bigger graph that computes both value and gradient.
 
-Because the rules are written with Voltax ops, the gradient nodes are ordinary
+Because the rules are written with Sentinex ops, the gradient nodes are ordinary
 nodes: they get optimized, compiled and executed like everything else, and can
 themselves be differentiated again.
 """
@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from voltax.graph.ir import Node
-from voltax.graph.tracing import GraphBuilder, Symbol
+from sentinex.graph.ir import Node
+from sentinex.graph.tracing import GraphBuilder, Symbol
 
 
 def _is_float(dtype) -> bool:
@@ -25,7 +25,7 @@ def _is_float(dtype) -> bool:
 
 def backward(builder: GraphBuilder, out: Symbol, wrt: list[Symbol]) -> list[Symbol | None]:
     """Cotangents of scalar `out` with respect to each Symbol in `wrt` (None = zero)."""
-    from voltax import ops  # late import: ops -> primitive -> tracing
+    from sentinex import ops  # late import: ops -> primitive -> tracing
 
     nodes = builder.graph.nodes
     wrt_ids = {w.node.id for w in wrt}

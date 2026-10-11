@@ -1,4 +1,4 @@
-"""Voltax's graph IR.
+"""Sentinex's graph IR.
 
 A `Graph` is a flat list of `Node`s in topological order (SSA style): each node
 defines exactly one array value, and its inputs are earlier nodes or `Literal`s.
@@ -14,7 +14,7 @@ There are three kinds of node:
 
 Compare with a jaxpr: a jaxpr is the same idea (typed SSA over primitives), but
 JAX hands the whole jaxpr to XLA, which fuses and schedules it as one program.
-Voltax keeps the graph and runs it node by node (see executor.py).
+Sentinex keeps the graph and runs it node by node (see executor.py).
 """
 
 from __future__ import annotations

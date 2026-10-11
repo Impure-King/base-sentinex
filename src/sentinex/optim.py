@@ -9,7 +9,7 @@ A `GradientTransformation` is a pair of pure functions:
 Transformations compose with `chain`; `adam` is `chain(scale_by_adam(...),
 scale_by_learning_rate(lr))`. The math follows Optax step for step, so results
 match `optax` to float rounding (tests/test_optim.py checks this). Because the
-update functions only use voltax.ops and array operators, optimizers trace into
+update functions only use sentinex.ops and array operators, optimizers trace into
 graph mode like everything else.
 """
 
@@ -20,7 +20,7 @@ from typing import Any, Callable, NamedTuple
 import jax
 import jax.numpy as jnp
 
-from voltax import ops
+from sentinex import ops
 
 Schedule = Callable[[Any], Any]
 

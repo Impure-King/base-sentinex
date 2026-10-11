@@ -1,7 +1,7 @@
 """Layers and initializers."""
 
-from voltax.nn import initializers
-from voltax.nn.layers import (
+from sentinex.nn import initializers
+from sentinex.nn.layers import (
     MLP,
     AvgPool2D,
     Conv2D,

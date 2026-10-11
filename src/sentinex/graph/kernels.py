@@ -21,7 +21,7 @@ from typing import Any
 import jax
 import numpy as np
 
-from voltax.graph.ir import Aval, Literal, Node
+from sentinex.graph.ir import Aval, Literal, Node
 
 # (prim, spec, params) -> jitted kernel; (that key, input avals) -> aval / executable.
 _JITTED: dict[tuple, Any] = {}
@@ -79,7 +79,7 @@ def _kernel_fn(prim, spec: tuple, params: tuple):
         args = [next(it) if s is None else lit for s, lit in zip(spec, literals)]
         return prim.impl(*args, **kwargs)
 
-    kernel.__name__ = f"voltax_{prim.name}"
+    kernel.__name__ = f"sentinex_{prim.name}"
     return kernel
 
 

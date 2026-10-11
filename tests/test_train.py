@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from voltax import data, losses, nn, optim, train
+from sentinex import data, losses, nn, optim, train
 
 from helpers import tree_allclose
 

@@ -6,8 +6,8 @@ import numpy as np
 import optax
 import pytest
 
-import voltax as vx
-from voltax import losses, ops, optim
+import sentinex as sx
+from sentinex import losses, ops, optim
 
 from helpers import rand, tree_allclose
 
@@ -49,7 +49,7 @@ def test_update_in_graph_mode_matches_eager(name, ours, ref):
     grads = jax.grad(_loss)(params)
     state = ours.init(params)
     eager = ours.update(grads, state, params)
-    graph = vx.function(ours.update)(grads, state, params)
+    graph = sx.function(ours.update)(grads, state, params)
     tree_allclose(graph, eager, rtol=1e-6, atol=1e-7)
 
 
@@ -86,4 +86,4 @@ def test_losses_match_optax():
 def test_losses_in_graph_mode():
     logits, labels = rand((4, 5)), jnp.array([0, 1, 4, 2])
     f = lambda z, y: (losses.cross_entropy(z, y), losses.accuracy(z, y), losses.binary_cross_entropy(z, ops.sigmoid(z)))
-    tree_allclose(vx.function(f)(logits, labels), f(logits, labels), rtol=1e-6)
+    tree_allclose(sx.function(f)(logits, labels), f(logits, labels), rtol=1e-6)

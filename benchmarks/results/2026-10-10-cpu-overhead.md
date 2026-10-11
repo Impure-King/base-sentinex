@@ -1,6 +1,6 @@
 # Per-op overhead: Apple M5 (cpu)
 
-2026-10-10T16:48:08 · commit d132355 · JAX 0.11.2 · load average at start [6.29, 9.22, 20.4]
+2026-10-10T16:48:08 · commit d132355 (Voltax repo; 4ad216a on this branch) · JAX 0.11.2 · load average at start [6.29, 9.22, 20.4]
 
 `x = x * 1.0001 + 0.0001` chained; time per call in microseconds (median of rounds).
 

@@ -579,7 +579,7 @@ wheels = [
 ]
 
 [[package]]
-name = "voltax"
+name = "sentinex"
 version = "0.2.0"
 source = { editable = "." }
 dependencies = [

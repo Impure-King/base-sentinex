@@ -17,7 +17,7 @@ from __future__ import annotations
 import collections
 from typing import Callable
 
-from voltax.graph.ir import CONST, INPUT, Graph, Literal, Node, aval_of
+from sentinex.graph.ir import CONST, INPUT, Graph, Literal, Node, aval_of
 
 
 def _rewrite(graph: Graph, visit: Callable[[Node, tuple], Node | None]) -> Graph:
@@ -67,7 +67,7 @@ def fold_constants(graph: Graph, max_size: int = 4096) -> Graph:
 def cse(graph: Graph) -> Graph:
     """Common-subexpression elimination by hash-consing (op, inputs, params).
 
-    Safe because every Voltax primitive is a pure function of its inputs; even RNG
+    Safe because every Sentinex primitive is a pure function of its inputs; even RNG
     ops take their key as an input. (TF must exclude its stateful ops here.)"""
     seen: dict[tuple, Node] = {}
 

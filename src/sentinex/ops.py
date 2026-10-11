@@ -1,4 +1,4 @@
-"""Voltax ops: the array operations models are written with.
+"""Sentinex ops: the array operations models are written with.
 
 Primitives (defined with `@primitive`) are the units graph mode records, compiles and
 differentiates. Composites (plain functions like `softmax`) are built from primitives,
@@ -17,7 +17,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import lax
 
-from voltax.primitive import primitive
+from sentinex.primitive import primitive
 
 # --------------------------------------------------------------------------- helpers
 
@@ -426,7 +426,7 @@ def _freeze_index(index):
         else:
             raise TypeError(
                 f"graph mode supports static indexing only (ints, slices, None, ...); "
-                f"got {type(i).__name__}. Use vx.ops.take for array indices."
+                f"got {type(i).__name__}. Use sx.ops.take for array indices."
             )
     return tuple(out)
 

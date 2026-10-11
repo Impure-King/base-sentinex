@@ -25,7 +25,7 @@ import jax.numpy as jnp
 sys.path.insert(0, os.path.dirname(__file__))
 from bench import environment  # noqa: E402
 
-import voltax as vx  # noqa: E402
+import sentinex as sx  # noqa: E402
 
 
 def chain(n_pairs):
@@ -65,8 +65,8 @@ def main():
             modes = {
                 "eager": f,
                 "jit": jax.jit(f),
-                "graph": vx.function(f),
-                "graph_xla": vx.function(f, jit_compile=True),
+                "graph": sx.function(f),
+                "graph_xla": sx.function(f, jit_compile=True),
             }
             row = {"size": size, "ops": n_ops}
             for name, fn in modes.items():

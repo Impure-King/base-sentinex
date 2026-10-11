@@ -4,8 +4,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-import voltax as vx
-from voltax import ops
+import sentinex as sx
+from sentinex import ops
 
 
 def tree_allclose(a, b, rtol=1e-5, atol=1e-6):
@@ -27,8 +27,8 @@ def weighted_sum(fn):
 
 
 def graph_value_and_grad(fn, *args, argnums=0):
-    """value_and_grad computed by Voltax's graph-mode autodiff."""
-    return vx.function(lambda *a: vx.value_and_grad(fn, argnums)(*a))(*args)
+    """value_and_grad computed by Sentinex's graph-mode autodiff."""
+    return sx.function(lambda *a: sx.value_and_grad(fn, argnums)(*a))(*args)
 
 
 def jax_value_and_grad(fn, *args, argnums=0):

@@ -1,10 +1,10 @@
-"""Losses and metrics, written with voltax.ops so they work in every mode."""
+"""Losses and metrics, written with sentinex.ops so they work in every mode."""
 
 from __future__ import annotations
 
 import jax.numpy as jnp
 
-from voltax import ops
+from sentinex import ops
 
 
 def _reduce(x, reduction: str):

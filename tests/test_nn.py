@@ -5,8 +5,8 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-import voltax as vx
-from voltax import nn
+import sentinex as sx
+from sentinex import nn
 
 from helpers import rand, tree_allclose
 
@@ -36,7 +36,7 @@ def test_output_shape_and_graph_mode(name, layer, in_shape, x):
     y = layer.apply(params, x)
     expected = layer.output_shape((x.shape[0], *in_shape[1:]))
     assert y.shape == tuple(expected)
-    tree_allclose(vx.function(layer.apply)(params, x), y, rtol=1e-5, atol=1e-5)
+    tree_allclose(sx.function(layer.apply)(params, x), y, rtol=1e-5, atol=1e-5)
 
 
 def test_causal_attention_ignores_the_future():
@@ -64,7 +64,7 @@ def test_dropout():
     kept = np.asarray(y != 0)
     assert abs(kept.mean() - 0.75) < 0.02
     np.testing.assert_allclose(np.asarray(y)[kept], 1 / 0.75, rtol=1e-6)
-    tree_allclose(vx.function(lambda k: layer.apply({}, x, key=k, train=True))(KEY), y)
+    tree_allclose(sx.function(lambda k: layer.apply({}, x, key=k, train=True))(KEY), y)
     with pytest.raises(ValueError):
         layer.apply({}, x, train=True)
 

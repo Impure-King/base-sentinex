@@ -1,5 +1,5 @@
 [project]
-name = "voltax"
+name = "sentinex"
 version = "0.2.0"
 description = "A small functional deep-learning library on JAX, with an op-by-op graph mode next to jax.jit."
 readme = "README.md"
@@ -20,7 +20,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/voltax"]
+packages = ["src/sentinex"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

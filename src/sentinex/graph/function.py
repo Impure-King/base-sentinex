@@ -1,7 +1,7 @@
-"""`vx.function`: trace once per input signature, cache the graph, run it op by op.
+"""`sx.function`: trace once per input signature, cache the graph, run it op by op.
 
-    step = vx.function(train_step)          # like tf.function (no jit_compile)
-    step = vx.function(train_step, jit_compile=True)   # graph -> one XLA program
+    step = sx.function(train_step)          # like tf.function (no jit_compile)
+    step = sx.function(train_step, jit_compile=True)   # graph -> one XLA program
 
 On each call:
   1. Flatten the arguments into leaves and build a signature: for each array leaf
@@ -26,10 +26,10 @@ from typing import Any, Callable
 import jax
 import numpy as np
 
-from voltax.graph import passes
-from voltax.graph.executor import Executable, interpret
-from voltax.graph.ir import Aval, Graph
-from voltax.graph.tracing import GraphBuilder, current_builder
+from sentinex.graph import passes
+from sentinex.graph.executor import Executable, interpret
+from sentinex.graph.ir import Aval, Graph
+from sentinex.graph.tracing import GraphBuilder, current_builder
 
 RETRACE_WARNING_THRESHOLD = 5
 
@@ -60,14 +60,14 @@ def _leaf_signature(leaf) -> tuple:
         hash(leaf)
     except TypeError:
         raise TypeError(
-            f"vx.function argument leaf of type {type(leaf).__name__} is neither an array "
+            f"sx.function argument leaf of type {type(leaf).__name__} is neither an array "
             "nor hashable, so it cannot be part of the trace signature"
         ) from None
     return ("static", type(leaf), leaf)
 
 
 class Function:
-    """A Python function compiled to Voltax graphs, one per input signature."""
+    """A Python function compiled to Sentinex graphs, one per input signature."""
 
     def __init__(self, fn: Callable, *, jit_compile: bool = False, optimize: bool = True):
         functools.update_wrapper(self, fn)
@@ -80,7 +80,7 @@ class Function:
 
     def __call__(self, *args, **kwargs):
         if current_builder() is not None:
-            # Called while tracing another vx.function: just inline the Python body.
+            # Called while tracing another sx.function: just inline the Python body.
             return self._fn(*args, **kwargs)
         key, treedef, leaves, sig = self._signature(args, kwargs)
         concrete = self._cache.get(key)
@@ -148,7 +148,7 @@ class Function:
         if self.trace_count > RETRACE_WARNING_THRESHOLD and not self._warned:
             self._warned = True
             warnings.warn(
-                f"vx.function '{graph.name}' has been traced {self.trace_count} times. Each new "
+                f"sx.function '{graph.name}' has been traced {self.trace_count} times. Each new "
                 "input shape/dtype or Python-scalar value makes a new graph. Pass changing "
                 "numbers as arrays, and keep batch shapes fixed.",
                 stacklevel=3,
@@ -179,7 +179,7 @@ class Function:
 
 
 def function(fn: Callable | None = None, *, jit_compile: bool = False, optimize: bool = True):
-    """Decorator/wrapper: compile `fn` to Voltax graphs (see module docstring)."""
+    """Decorator/wrapper: compile `fn` to Sentinex graphs (see module docstring)."""
     if fn is None:
         return lambda f: Function(f, jit_compile=jit_compile, optimize=optimize)
     return Function(fn, jit_compile=jit_compile, optimize=optimize)

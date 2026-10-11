@@ -8,7 +8,7 @@ A layer holds only hyperparameters. Its parameters are a separate pytree:
 
 `init(key, input_shape)` creates parameters, `output_shape(input_shape)` does
 shape inference (so containers can chain layers), and `apply(params, x, key=None,
-train=False)` is the forward pass. `apply` only uses `voltax.ops` and array
+train=False)` is the forward pass. `apply` only uses `sentinex.ops` and array
 operators, so the same layer runs eagerly, under `jax.jit`, and in graph mode.
 """
 
@@ -21,8 +21,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from voltax import ops
-from voltax.nn import initializers as init_
+from sentinex import ops
+from sentinex.nn import initializers as init_
 
 Shape = tuple  # dims are ints, or None for "any size"
 

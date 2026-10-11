@@ -1,4 +1,5 @@
 {
+  "note": "Measured before the library was renamed from Voltax to Sentinex. Labels were renamed afterwards; numbers are unchanged. environment.git_commit (d132355) is the hash in the original Voltax repository; the same code is commit 4ad216a on base-sentinex reference/v2.",
   "environment": {
     "date": "2026-10-10T16:45:59",
     "git_commit": "d132355",
@@ -6,7 +7,7 @@
     "python": "3.12.15",
     "jax": "0.11.2",
     "jaxlib": "0.11.2",
-    "voltax": "0.2.0",
+    "sentinex": "0.2.0",
     "backend": "cpu",
     "devices": [
       "cpu:0"
@@ -30,10 +31,10 @@
     ],
     "modes": [
       "raw_jax",
-      "voltax_jit",
-      "voltax_graph_xla",
-      "voltax_graph",
-      "voltax_eager"
+      "sentinex_jit",
+      "sentinex_graph_xla",
+      "sentinex_graph",
+      "sentinex_eager"
     ],
     "warmup": 10,
     "steps": 0,
@@ -82,7 +83,7 @@
           ],
           "xla_kernels_per_step": 50
         },
-        "voltax_jit": {
+        "sentinex_jit": {
           "first_call_s": 0.1449,
           "first_step_loss": 2.6504125595092773,
           "step_ms_median": 4.2246,
@@ -113,7 +114,7 @@
           ],
           "xla_kernels_per_step": 47
         },
-        "voltax_graph_xla": {
+        "sentinex_graph_xla": {
           "first_call_s": 0.3117,
           "first_step_loss": 2.6504125595092773,
           "step_ms_median": 4.1705,
@@ -149,7 +150,7 @@
           "compile_s": 0.1345,
           "xla_kernels_per_step": 47
         },
-        "voltax_graph": {
+        "sentinex_graph": {
           "first_call_s": 0.4044,
           "first_step_loss": 2.6504125595092773,
           "step_ms_median": 5.5953,
@@ -185,7 +186,7 @@
           "compile_s": 0.3809,
           "kernels_per_step": 143
         },
-        "voltax_eager": {
+        "sentinex_eager": {
           "first_call_s": 1.429,
           "first_step_loss": 2.6504125595092773,
           "step_ms_median": 26.2017,
@@ -241,7 +242,7 @@
           ],
           "xla_kernels_per_step": 47
         },
-        "voltax_jit": {
+        "sentinex_jit": {
           "first_call_s": 0.1006,
           "first_step_loss": 2.8677518367767334,
           "step_ms_median": 0.7234,
@@ -272,7 +273,7 @@
           ],
           "xla_kernels_per_step": 45
         },
-        "voltax_graph_xla": {
+        "sentinex_graph_xla": {
           "first_call_s": 0.1276,
           "first_step_loss": 2.8677518367767334,
           "step_ms_median": 0.7273,
@@ -308,7 +309,7 @@
           "compile_s": 0.0745,
           "xla_kernels_per_step": 45
         },
-        "voltax_graph": {
+        "sentinex_graph": {
           "first_call_s": 0.0934,
           "first_step_loss": 2.8677520751953125,
           "step_ms_median": 2.1648,
@@ -344,7 +345,7 @@
           "compile_s": 0.0861,
           "kernels_per_step": 142
         },
-        "voltax_eager": {
+        "sentinex_eager": {
           "first_call_s": 0.3482,
           "first_step_loss": 2.8677520751953125,
           "step_ms_median": 6.314,
@@ -400,7 +401,7 @@
           ],
           "xla_kernels_per_step": 85
         },
-        "voltax_jit": {
+        "sentinex_jit": {
           "first_call_s": 0.2798,
           "first_step_loss": 2.3575875759124756,
           "step_ms_median": 20.6212,
@@ -431,7 +432,7 @@
           ],
           "xla_kernels_per_step": 83
         },
-        "voltax_graph_xla": {
+        "sentinex_graph_xla": {
           "first_call_s": 0.3631,
           "first_step_loss": 2.3575875759124756,
           "step_ms_median": 20.7014,
@@ -467,7 +468,7 @@
           "compile_s": 0.2786,
           "xla_kernels_per_step": 83
         },
-        "voltax_graph": {
+        "sentinex_graph": {
           "first_call_s": 0.4517,
           "first_step_loss": 2.3575875759124756,
           "step_ms_median": 26.8067,
@@ -503,7 +504,7 @@
           "compile_s": 0.3999,
           "kernels_per_step": 185
         },
-        "voltax_eager": {
+        "sentinex_eager": {
           "first_call_s": 1.4733,
           "first_step_loss": 2.3575875759124756,
           "step_ms_median": 32.1796,
@@ -559,7 +560,7 @@
           ],
           "xla_kernels_per_step": 300
         },
-        "voltax_jit": {
+        "sentinex_jit": {
           "first_call_s": 0.4123,
           "first_step_loss": 5.884763717651367,
           "step_ms_median": 23.9685,
@@ -590,7 +591,7 @@
           ],
           "xla_kernels_per_step": 297
         },
-        "voltax_graph_xla": {
+        "sentinex_graph_xla": {
           "first_call_s": 0.4928,
           "first_step_loss": 5.884763717651367,
           "step_ms_median": 26.6443,
@@ -626,7 +627,7 @@
           "compile_s": 0.3274,
           "xla_kernels_per_step": 299
         },
-        "voltax_graph": {
+        "sentinex_graph": {
           "first_call_s": 0.6896,
           "first_step_loss": 5.884763717651367,
           "step_ms_median": 32.2863,
@@ -662,7 +663,7 @@
           "compile_s": 0.6193,
           "kernels_per_step": 895
         },
-        "voltax_eager": {
+        "sentinex_eager": {
           "first_call_s": 2.1365,
           "first_step_loss": 5.884763717651367,
           "step_ms_median": 50.9775,

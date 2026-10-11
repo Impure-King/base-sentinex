@@ -1,9 +1,9 @@
-"""Primitives: the one op table every Voltax mode goes through.
+"""Primitives: the one op table every Sentinex mode goes through.
 
 A primitive has
   * `impl`: the computation, written with jax.numpy / lax. Eager mode and `jax.jit`
     call it directly. The graph executor compiles it into a one-op XLA kernel.
-  * VJP rules (optional, one per input), written with Voltax ops. Only graph-mode
+  * VJP rules (optional, one per input), written with Sentinex ops. Only graph-mode
     autodiff uses them; under eager/jit, JAX differentiates `impl` itself.
 
 Calling a primitive dispatches on its arguments: if any argument is a graph
@@ -17,7 +17,7 @@ from typing import Callable
 
 import jax
 
-from voltax.graph.tracing import Symbol
+from sentinex.graph.tracing import Symbol
 
 
 class Primitive:

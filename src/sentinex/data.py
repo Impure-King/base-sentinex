@@ -18,7 +18,7 @@ def batches(
     epochs: int | None = 1,
 ) -> Iterator[tuple]:
     """Yield tuples of batches. Fixed batch shapes (drop_remainder=True) avoid
-    retracing in jax.jit and vx.function."""
+    retracing in jax.jit and sx.function."""
     n = len(arrays[0])
     if any(len(a) != n for a in arrays):
         raise ValueError("all arrays need the same leading dimension")

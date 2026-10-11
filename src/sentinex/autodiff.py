@@ -1,8 +1,8 @@
-"""`vx.grad` / `vx.value_and_grad`: one API, two autodiff engines.
+"""`sx.grad` / `sx.value_and_grad`: one API, two autodiff engines.
 
 Outside graph tracing (eager, or inside `jax.jit`) these are `jax.value_and_grad`.
-While a `vx.function` is being traced they run Voltax's symbolic reverse mode
-(`voltax.graph.autodiff.backward`), which appends gradient nodes to the graph.
+While a `sx.function` is being traced they run Sentinex's symbolic reverse mode
+(`sentinex.graph.autodiff.backward`), which appends gradient nodes to the graph.
 """
 
 from __future__ import annotations
@@ -12,8 +12,8 @@ from typing import Callable, Sequence
 import jax
 import numpy as np
 
-from voltax.graph.autodiff import backward
-from voltax.graph.tracing import Symbol, current_builder
+from sentinex.graph.autodiff import backward
+from sentinex.graph.tracing import Symbol, current_builder
 
 
 def value_and_grad(fn: Callable, argnums: int | Sequence[int] = 0, has_aux: bool = False) -> Callable:
@@ -37,7 +37,7 @@ def grad(fn: Callable, argnums: int | Sequence[int] = 0, has_aux: bool = False) 
 
 
 def _graph_value_and_grad(builder, fn, argnums, has_aux, args, kwargs):
-    from voltax import ops
+    from sentinex import ops
 
     nums = (argnums,) if isinstance(argnums, int) else tuple(argnums)
     args = list(args)

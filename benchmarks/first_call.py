@@ -3,7 +3,7 @@
     uv run python benchmarks/first_call.py
 
 For each workload's train step this measures, from a cold kernel cache:
-  * Voltax trace time and pass time,
+  * Sentinex trace time and pass time,
   * compiling every kernel one at a time vs on a thread pool,
   * jax.jit's trace + compile time for the same step, for comparison,
   * the Python cost of a graph-mode cache hit (flatten args + build the key + lookup).
@@ -25,12 +25,12 @@ sys.path.insert(0, os.path.dirname(__file__))
 import workloads  # noqa: E402
 from bench import environment  # noqa: E402
 
-from voltax.graph import kernels  # noqa: E402
+from sentinex.graph import kernels  # noqa: E402
 
 
 def measure(w) -> dict:
     batch = w.make_batch(0)
-    state, step, _ = w.voltax_step("graph")
+    state, step, _ = w.sentinex_step("graph")
     result = {}
 
     traced = step.trace(state, batch)  # trace + passes, no compile
@@ -45,7 +45,7 @@ def measure(w) -> dict:
         result[f"compile_s_{workers}_thread" + ("s" if workers > 1 else "")] = round(time.perf_counter() - t0, 3)
     result["unique_kernels"] = kernels.KernelStats.compiles
 
-    jstate, jstep, _ = w.voltax_step("jit")
+    jstate, jstep, _ = w.sentinex_step("jit")
     t0 = time.perf_counter()
     lowered = jstep.lower(jstate, batch)
     t1 = time.perf_counter()
@@ -54,7 +54,7 @@ def measure(w) -> dict:
     result["jax_jit_trace_lower_s"] = round(t1 - t0, 4)
     result["jax_jit_compile_s"] = round(t2 - t1, 4)
 
-    # A cache hit: everything vx.function does before running the executable.
+    # A cache hit: everything sx.function does before running the executable.
     step(state, batch)
     samples = []
     for _ in range(5):
@@ -84,7 +84,7 @@ def main():
         "",
         f"{env['date']} · commit {env['git_commit']} · JAX {env['jax']} · load average at start {env['load_average_at_start']}",
         "",
-        "| step | Voltax trace s | passes s | kernels (unique) | compile, 1 thread s | compile, 8 threads s | jax.jit trace+lower s | jax.jit compile s | cache hit µs (leaves) |",
+        "| step | Sentinex trace s | passes s | kernels (unique) | compile, 1 thread s | compile, 8 threads s | jax.jit trace+lower s | jax.jit compile s | cache hit µs (leaves) |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for name, r in rows.items():

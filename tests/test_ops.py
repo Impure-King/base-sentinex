@@ -4,8 +4,8 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-import voltax as vx
-from voltax import ops
+import sentinex as sx
+from sentinex import ops
 
 from helpers import graph_value_and_grad, jax_value_and_grad, rand, tree_allclose, weighted_sum
 
@@ -67,7 +67,7 @@ CASES = [
 @pytest.mark.parametrize("name,fn,args,argnums", CASES, ids=[c[0] for c in CASES])
 def test_forward_matches_eager(name, fn, args, argnums):
     eager = fn(*args)
-    graph = vx.function(fn)(*args)
+    graph = sx.function(fn)(*args)
     tree_allclose(eager, graph, rtol=1e-5, atol=1e-6)
 
 
@@ -93,7 +93,7 @@ def test_one_hot_and_random_ops_run_in_graph():
     key = jax.random.PRNGKey(3)
     f = lambda k, y: (ops.one_hot(y, 4), ops.bernoulli(ops.random_split(k, 2)[1], 0.5, (8,)))
     eager = f(key, jnp.array([0, 3, 1]))
-    graph = vx.function(f)(key, jnp.array([0, 3, 1]))
+    graph = sx.function(f)(key, jnp.array([0, 3, 1]))
     tree_allclose(eager, graph)
 
 

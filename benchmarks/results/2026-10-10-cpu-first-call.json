@@ -1,4 +1,5 @@
 {
+  "note": "Measured before the library was renamed from Voltax to Sentinex. Labels were renamed afterwards; numbers are unchanged. environment.git_commit (d132355) is the hash in the original Voltax repository; the same code is commit 4ad216a on base-sentinex reference/v2.",
   "environment": {
     "date": "2026-10-10T16:48:11",
     "git_commit": "d132355",
@@ -6,7 +7,7 @@
     "python": "3.12.15",
     "jax": "0.11.2",
     "jaxlib": "0.11.2",
-    "voltax": "0.2.0",
+    "sentinex": "0.2.0",
     "backend": "cpu",
     "devices": [
       "cpu:0"

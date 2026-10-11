@@ -1,11 +1,11 @@
-# Voltax walkthrough
+# Sentinex walkthrough
 
-This explains how Voltax works, why it is built this way, and how its graph mode
+This explains how Sentinex works, why it is built this way, and how its graph mode
 differs from `jax.jit`. It ends with the order to rebuild it in and the questions
 an interviewer is likely to ask.
 
 Read it next to the code. Every section names the file it describes. Graph mode
-is about 1,100 lines across seven files in `src/voltax/graph/`.
+is about 1,100 lines across seven files in `src/sentinex/graph/`.
 
 ## Contents
 
@@ -35,24 +35,24 @@ with `jax.numpy`/`lax`, and optional VJP rules. Calling a primitive does one che
 ```python
 def __call__(self, *args, **params):
     for a in args:
-        if type(a) is Symbol:                     # we are tracing a Voltax graph
+        if type(a) is Symbol:                     # we are tracing a Sentinex graph
             return a.builder.record(self, args, params)
     return self.impl(*args, **params)             # otherwise: just run it
 ```
 
 That `if` is the whole trick. Layers, losses and optimizers are written with
-`voltax.ops` (and ordinary `+`, `*`, `@`, indexing), so the same model code runs
+`sentinex.ops` (and ordinary `+`, `*`, `@`, indexing), so the same model code runs
 in four ways:
 
 | mode | first call | every later call |
 |---|---|---|
 | eager | nothing special | Python runs the model; each op is dispatched to JAX one at a time; `jax.value_and_grad` does AD op by op |
 | `jax.jit` | JAX traces Python with its tracers into a jaxpr (AD included), lowers it to StableHLO, XLA optimizes and compiles one executable | C++ looks up the signature, runs the one executable |
-| `vx.function` | Voltax traces Python with `Symbol`s into a Voltax `Graph` (AD included), runs graph passes, compiles one small XLA kernel per op (cached) | Python looks up the signature, runs the kernels one after another |
-| `vx.function(jit_compile=True)` | same Voltax graph, then evaluated under `jax.jit` so XLA compiles it as one program | runs the one executable |
+| `sx.function` | Sentinex traces Python with `Symbol`s into a Sentinex `Graph` (AD included), runs graph passes, compiles one small XLA kernel per op (cached) | Python looks up the signature, runs the kernels one after another |
+| `sx.function(jit_compile=True)` | same Sentinex graph, then evaluated under `jax.jit` so XLA compiles it as one program | runs the one executable |
 
-Under `jax.jit`, `impl` receives JAX tracers, so Voltax ops become part of JAX's
-jaxpr. Voltax adds nothing at run time there: Voltax-under-jit and hand-written JAX
+Under `jax.jit`, `impl` receives JAX tracers, so Sentinex ops become part of JAX's
+jaxpr. Sentinex adds nothing at run time there: Sentinex-under-jit and hand-written JAX
 both become one XLA program, and in the benchmarks they run within −7% to +3% of
 each other.
 
@@ -68,10 +68,10 @@ Files: `graph/tracing.py`, `graph/kernels.py`.
 
 **Symbols.** A `Symbol` stands in for an array whose value isn't known yet. It
 has a shape and dtype (its `Aval`) and points at the graph node that will compute
-it. Its operators (`__add__`, `__matmul__`, `__getitem__`, ...) call Voltax ops,
+it. Its operators (`__add__`, `__matmul__`, `__getitem__`, ...) call Sentinex ops,
 which see a Symbol argument and record a node instead of computing.
 
-**The builder.** `GraphBuilder` is the trace context. `vx.function` creates one,
+**The builder.** `GraphBuilder` is the trace context. `sx.function` creates one,
 pushes it on a thread-local stack, creates one input node per array argument, and
 calls your Python function on Symbols. `record(prim, args, params)` does four
 things:
@@ -83,7 +83,7 @@ things:
 3. Works out the output shape and dtype (abstract evaluation, below).
 4. Appends a `Node` and returns a new Symbol for it.
 
-**Abstract evaluation.** To know a node's output shape, Voltax runs
+**Abstract evaluation.** To know a node's output shape, Sentinex runs
 `jax.eval_shape` on the primitive's own `impl` with `ShapeDtypeStruct` inputs.
 Nothing is computed, and the shape rule can never disagree with the kernel,
 because it *is* the kernel. The result is cached per (op, params, literals, input
@@ -107,13 +107,13 @@ float32. `tests/test_passes.py::test_literals_keep_weak_typing` checks this.
 * An op with no Symbol arguments runs eagerly during tracing. `ops.exp(numpy_array)`
   is just computed and becomes a const. You get constant folding for free here.
 * Passing a Symbol to `jax.numpy` fails with JAX's "not a valid JAX type"
-  error; inside graph mode you must use `voltax.ops`.
+  error; inside graph mode you must use `sentinex.ops`.
 * A Symbol stored in a global and used after its trace finished raises
   `TracingError` (JAX calls this an "escaped tracer").
 
 This is the same mechanism JAX uses to build jaxprs, and TensorFlow uses to build
 `FuncGraph`s. The difference is that here it fits in one readable file and
-produces Voltax's own IR.
+produces Sentinex's own IR.
 
 ---
 
@@ -121,7 +121,7 @@ produces Voltax's own IR.
 
 File: `graph/function.py`.
 
-Each `vx.function` keeps a dictionary from *signature* to `ConcreteFunction`
+Each `sx.function` keeps a dictionary from *signature* to `ConcreteFunction`
 (one traced, optimized, compiled graph). On every call:
 
 1. Flatten `(args, kwargs)` into leaves with `jax.tree.flatten`.
@@ -133,7 +133,7 @@ Each `vx.function` keeps a dictionary from *signature* to `ConcreteFunction`
 
 **What causes a retrace:**
 
-| change between calls | `vx.function` | `jax.jit` |
+| change between calls | `sx.function` | `jax.jit` |
 |---|---|---|
 | new array values, same shapes | no retrace | no retrace |
 | new shape or dtype | retrace | retrace |
@@ -143,7 +143,7 @@ Each `vx.function` keeps a dictionary from *signature* to `ConcreteFunction`
 
 Treating Python scalars as static is the `tf.function` rule, and it's a classic
 source of slowdowns: pass the step number as a Python int and you trace every
-step. Voltax warns after 5 traces of the same function. `examples/inspect_graph.py`
+step. Sentinex warns after 5 traces of the same function. `examples/inspect_graph.py`
 section 5 shows each row of this table happening.
 
 **Closures are captured by value.** A weight the function closes over becomes a
@@ -151,9 +151,9 @@ const node in the graph. Rebinding the Python variable later doesn't change the
 cached graph. `jax.jit` behaves the same way. TensorFlow differs here: a
 `tf.Variable` is captured by reference, so the graph reads its current value.
 
-**Nesting.** Calling a `vx.function` while another is being traced just inlines
+**Nesting.** Calling a `sx.function` while another is being traced just inlines
 its Python body. Calling one inside `jax.jit` or `jax.grad` (arguments are JAX
-tracers) replays the cached Voltax graph through JAX with `interpret`, so graph
+tracers) replays the cached Sentinex graph through JAX with `interpret`, so graph
 mode composes with JAX transforms.
 
 **Cost of a cache hit.** Flattening and building the key happens in Python: 8 µs
@@ -189,7 +189,7 @@ Design choices worth defending:
   needed, and autodiff can walk the graph backwards by id.
 * **One output per node.** It keeps the executor's register file and autodiff
   simple. Where an op naturally has several outputs, such as the backward of a
-  convolution (gradient for the input and for the filter), Voltax makes one node
+  convolution (gradient for the input and for the filter), Sentinex makes one node
   per output. TensorFlow does the same: `Conv2DBackpropInput` and
   `Conv2DBackpropFilter` are separate ops.
 * **Static shapes.** Every aval is fully known. That is what lets each node be
@@ -199,8 +199,8 @@ Design choices worth defending:
 jaxpr allows multiple outputs per equation and nests sub-jaxprs (`pjit`,
 `custom_jvp_call`, `scan`, `cond`), and it is a short-lived intermediate: JAX
 lowers it straight to StableHLO, and XLA's HLO is where the optimization happens.
-In Voltax the graph *is* the thing that gets optimized and executed. Run
-`examples/inspect_graph.py` to see the same step as a Voltax graph, a jaxpr,
+In Sentinex the graph *is* the thing that gets optimized and executed. Run
+`examples/inspect_graph.py` to see the same step as a Sentinex graph, a jaxpr,
 and XLA's optimized HLO.
 
 ---
@@ -209,7 +209,7 @@ and XLA's optimized HLO.
 
 Files: `autodiff.py`, `graph/autodiff.py`, VJP rules in `ops.py`.
 
-`vx.value_and_grad(fn)` checks whether a graph trace is active. If not, it is
+`sx.value_and_grad(fn)` checks whether a graph trace is active. If not, it is
 `jax.value_and_grad`. If so, it differentiates symbolically on the graph, the way
 `tf.gradients` does in TensorFlow graph mode:
 
@@ -231,7 +231,7 @@ The new gradient nodes are appended to the same graph, so the result is one grap
 that computes the loss *and* the gradients. It gets optimized and executed like
 anything else.
 
-**VJP rules** are written with Voltax ops, one per input:
+**VJP rules** are written with Sentinex ops, one per input:
 
 ```python
 mul.defvjp(
@@ -247,11 +247,11 @@ numpy broadcasting. Every binary op needs it.
 
 **Derived backward kernels.** For ops whose gradient is a different kind of
 computation (convolution, pooling, gather/`take`, `getitem`, `concatenate`,
-`einsum`), Voltax doesn't hand-write the math. It creates a backward primitive,
+`einsum`), Sentinex doesn't hand-write the math. It creates a backward primitive,
 e.g. `conv2d_grad1`, whose kernel body is `jax.vjp` of the forward `impl`. The
 graph still gets a real backward node per input, and the executor still runs it
 as one kernel. This mirrors TensorFlow's separate backward kernels. Be upfront
-about it: the *structure* of the gradient graph is Voltax's, but the inside of
+about it: the *structure* of the gradient graph is Sentinex's, but the inside of
 those few backward kernels comes from JAX.
 
 Because gradient nodes are ordinary nodes, gradients can be differentiated again.
@@ -260,7 +260,7 @@ Because gradient nodes are ordinary nodes, gradients can be differentiated again
 **Compared with JAX.** JAX doesn't write VJP rules per primitive. It defines
 forward-mode (JVP) rules, linearizes, and *transposes* the linear part to get
 reverse mode. That gives forward mode for free and composes with `vmap`. The
-Voltax/TensorFlow approach (direct VJP rules) is simpler to explain and is all
+Sentinex/TensorFlow approach (direct VJP rules) is simpler to explain and is all
 graph mode needs.
 
 ---
@@ -286,7 +286,7 @@ Op counts for the benchmark train steps (forward + backward + Adam):
 | CNN | 199 | 191 | 185 | 185 | 185 |
 | transformer | 950 | 920 | 915 | 895 | 895 |
 
-**Why CSE is safe:** every Voltax primitive is a pure function of its inputs.
+**Why CSE is safe:** every Sentinex primitive is a pure function of its inputs.
 Even random ops take their key as an input (stateless RNG), so two
 `bernoulli(key, ...)` nodes with the same key really are the same value.
 TensorFlow's graph optimizer has to exclude its stateful random ops from CSE.
@@ -303,7 +303,7 @@ the optimizer.
 
 There is no algebraic simplification either: `v + eps_root` with `eps_root = 0.0`
 stays an `add` node. (It is not quite a no-op: `-0.0 + 0.0` is `+0.0`. XLA's
-simplifier knows rules like this; Voltax's passes don't.)
+simplifier knows rules like this; Sentinex's passes don't.)
 
 ---
 
@@ -311,13 +311,13 @@ simplifier knows rules like this; Voltax's passes don't.)
 
 Files: `graph/kernels.py`, `graph/executor.py`.
 
-**Kernels.** For each op node Voltax compiles a *kernel*: the primitive's `impl`
+**Kernels.** For each op node Sentinex compiles a *kernel*: the primitive's `impl`
 with its params and literals closed over, compiled alone by XLA
 (`jax.jit(...).lower(input_avals).compile()`). Kernels live in a global cache
 keyed by (primitive, literals, params, input avals). So the second `add` of two
 `f32[512]` arrays anywhere, in any graph, after any retrace, reuses the same
 executable. That is what a TensorFlow kernel registry gives you, except TensorFlow
-ships its kernels precompiled and Voltax compiles them on first use.
+ships its kernels precompiled and Sentinex compiles them on first use.
 
 Compiling the MLP step's 94 distinct kernels one by one takes 0.68 s; the
 transformer's 255 take 2.2 s. XLA compilation releases Python's GIL, so
@@ -357,17 +357,17 @@ time per op type. On the CNN step it shows XLA:CPU's convolution backward kernel
 and the max-pool backward taking 64% of the op time.
 
 **Compared with TensorFlow's executor:** TensorFlow runs its graph from C++, and
-independent ops can run concurrently on an inter-op thread pool. Voltax runs one
+independent ops can run concurrently on an inter-op thread pool. Sentinex runs one
 op at a time from Python. Both share the defining property: no cross-op fusion.
 
 ---
 
 ## 8. Graph mode vs jaxpr → XLA
 
-| | Voltax graph mode | `jax.jit` |
+| | Sentinex graph mode | `jax.jit` |
 |---|---|---|
-| who traces | Voltax `Symbol`s + `GraphBuilder` | JAX tracers |
-| IR | Voltax `Graph`: single-output SSA nodes over Voltax primitives | jaxpr → StableHLO → HLO |
+| who traces | Sentinex `Symbol`s + `GraphBuilder` | JAX tracers |
+| IR | Sentinex `Graph`: single-output SSA nodes over Sentinex primitives | jaxpr → StableHLO → HLO |
 | autodiff | symbolic reverse mode on the graph (VJP rules) | JVP + transpose while tracing |
 | optimization | identity forwarding, const folding, CSE, DCE | XLA: hundreds of HLO passes incl. algebraic simplification, fusion, layout assignment |
 | unit of execution | one small precompiled kernel per node | one executable for the whole step, made of fused kernels |
@@ -376,7 +376,7 @@ op at a time from Python. Both share the defining property: no cross-op fusion.
 | per-step overhead | Python loop: one dispatch per node | one dispatch |
 | first-call cost | trace + passes + compile every *new* kernel (cached across graphs); 0.2–0.7 s here | trace + compile the whole program (cached per function); 0.1–0.4 s here |
 | what you can inspect | the graph, per-op timings | jaxpr, HLO before/after optimization |
-| `jit_compile=True` | the Voltax graph is evaluated under `jax.jit` and becomes one XLA program | (this is the default) |
+| `jit_compile=True` | the Sentinex graph is evaluated under `jax.jit` and becomes one XLA program | (this is the default) |
 
 The trade-off in one sentence: graph mode takes your model's Python out of the hot
 loop and lets you see and transform the graph, but without fusion every op pays a
@@ -384,7 +384,7 @@ dispatch and a full round trip through memory. XLA removes both by compiling the
 whole program, and here that one compile is even cheaper than compiling graph
 mode's per-op kernels.
 
-`vx.function(..., jit_compile=True)` shows the graph IR is not tied to the
+`sx.function(..., jit_compile=True)` shows the graph IR is not tied to the
 executor: the same optimized graph can be lowered to one XLA program, exactly like
 `tf.function(jit_compile=True)`.
 
@@ -427,7 +427,7 @@ Everything below is from one run on an Apple M5 (CPU backend, otherwise idle).
 
 Median train-step time (forward + backward + Adam), and change versus raw JAX + Optax:
 
-| workload | raw JAX + Optax | Voltax `jax.jit` | graph → XLA | graph mode | eager |
+| workload | raw JAX + Optax | Sentinex `jax.jit` | graph → XLA | graph mode | eager |
 |---|---:|---:|---:|---:|---:|
 | MLP 784-512-512-10, batch 512 | 4.26 ms | −0.8% | −2.0% | +31% | +515% |
 | same MLP, batch 32 | 0.71 ms | +1.4% | +2.0% | +204% | +785% |
@@ -436,11 +436,11 @@ Median train-step time (forward + backward + Adam), and change versus raw JAX + 
 
 How to read it:
 
-1. **Under `jax.jit`, Voltax is free.** −7% to +3% versus hand-written JAX + Optax: both are one
+1. **Under `jax.jit`, Sentinex is free.** −7% to +3% versus hand-written JAX + Optax: both are one
    XLA program, and the remaining differences come from equivalent-but-different model code
    (e.g. one-hot vs gather in the loss). On the transformer no single swapped component explains
    the 7%; it is XLA fusing two slightly different whole programs differently.
-2. **The Voltax graph loses nothing XLA needs.** Lowered to XLA (`jit_compile=True`) it lands
+2. **The Sentinex graph loses nothing XLA needs.** Lowered to XLA (`jit_compile=True`) it lands
    within 4% of raw JAX.
 3. **Op-by-op execution costs 25–34% on these steps, 3x on a tiny one.** Graph mode runs 2–3x more
    kernels than XLA (143 vs 47 for the MLP, 895 vs 297 for the transformer). On mid-size steps the
@@ -456,7 +456,7 @@ How to read it:
    whole-program XLA compile, because every compile has fixed overhead. TensorFlow avoids this by
    shipping precompiled kernels.
 
-What you can claim from this: Voltax under `jax.jit` matches hand-written JAX + Optax on CPU
+What you can claim from this: Sentinex under `jax.jit` matches hand-written JAX + Optax on CPU
 (within a few percent, about 120k examples/s for the batch-512 MLP on an M5), and its graph mode
 shows the cost of giving up fusion (25–34% on mid-size CPU steps, 3x when dispatch-bound). What
 you can't claim: GPU numbers. This machine has no CUDA. Fusion and launch overhead usually matter
@@ -472,7 +472,7 @@ measurement.
   Adding them means primitives whose params hold sub-graphs, and an executor that
   can run a sub-graph (this is how TF's `If`/`While` ops and JAX's `cond`/`scan` work).
 * **Static shapes only.** Every new batch size is a new trace. `tf.function` can
-  trace with unknown dimensions (`input_signature` with `None`); Voltax can't,
+  trace with unknown dimensions (`input_signature` with `None`); Sentinex can't,
   because it compiles each kernel for exact shapes.
 * **The executor is a Python loop**, sequential, with no inter-op parallelism and
   no buffer donation.
@@ -498,7 +498,7 @@ force you to redo earlier ones.
    print the graph. This is the most important step: get it right before moving on.
 3. **An interpreter.** `interpret(graph, args)` that runs `impl` per node. Test
    "traced then interpreted" == eager for every op.
-4. **`vx.function`.** Signature key, cache, retracing. Write the retrace tests
+4. **`sx.function`.** Signature key, cache, retracing. Write the retrace tests
    (shape, dtype, structure, Python scalars) first.
 5. **Symbolic autodiff.** `backward` with forward and backward sweeps; VJP rules
    for add/sub/mul/div with `_unbroadcast`, then sum, reshape, matmul, the unary
@@ -543,11 +543,11 @@ memory for the whole program. See the numbers in section 10 and
 **Then why do graph runtimes exist?** Tracing once removes the model's Python from
 the step (1.2x to 4.7x faster than eager here), and the graph can be inspected,
 optimized, serialized and run without Python. With precompiled kernels, as in
-TensorFlow, there is also no compile step at all. Voltax compiles its kernels on
+TensorFlow, there is also no compile step at all. Sentinex compiles its kernels on
 first use, so its first call is slower than `jax.jit`'s.
 
 **How do you get shapes without running anything?** Abstract evaluation: propagate
-avals through each op's shape rule. Voltax uses `jax.eval_shape` on the kernel.
+avals through each op's shape rule. Sentinex uses `jax.eval_shape` on the kernel.
 
 **What triggers retracing?** A new signature: shapes, dtypes, pytree structure, or
 values of static (non-array) arguments. Know the Python-scalar difference between

@@ -3,8 +3,8 @@
     uv run python examples/inspect_graph.py
 
 Prints, for one small Dense + softmax-cross-entropy SGD step:
-  1. the Voltax graph as traced, and the op counts after each optimization pass
-  2. the optimized Voltax graph (what the executor runs, one kernel per op)
+  1. the Sentinex graph as traced, and the op counts after each optimization pass
+  2. the optimized Sentinex graph (what the executor runs, one kernel per op)
   3. the jaxpr JAX traces for jax.jit of the same function
   4. what XLA turns that into: the fused kernels of the optimized HLO
   5. retracing: which calls reuse the cached graph and which trace again
@@ -16,8 +16,8 @@ import re
 import jax
 import jax.numpy as jnp
 
-import voltax as vx
-from voltax import losses, ops
+import sentinex as sx
+from sentinex import losses, ops
 
 
 def loss_fn(params, x, y):
@@ -26,7 +26,7 @@ def loss_fn(params, x, y):
 
 
 def sgd_step(params, x, y, lr):
-    loss, grads = vx.value_and_grad(loss_fn)(params, x, y)
+    loss, grads = sx.value_and_grad(loss_fn)(params, x, y)
     return jax.tree.map(lambda p, g: p - lr * g, params, grads), loss
 
 
@@ -39,14 +39,14 @@ def main():
     params = {"w": jax.random.normal(key, (16, 4)) * 0.1, "b": jnp.zeros(4)}
     x, y = jax.random.normal(key, (8, 16)), jnp.arange(8) % 4
 
-    step = vx.function(sgd_step)
+    step = sx.function(sgd_step)
     cf = step.get_concrete_function(params, x, y, 0.1)
 
-    banner("1. Voltax graph as traced (forward + symbolic backward), and after each pass")
+    banner("1. Sentinex graph as traced (forward + symbolic backward), and after each pass")
     print(cf.raw_graph.summary())
     print("ops after each pass:", cf.pass_stats)
 
-    banner("2. Optimized Voltax graph: the executor runs these one by one")
+    banner("2. Optimized Sentinex graph: the executor runs these one by one")
     print(cf.graph.pretty())
 
     banner("3. The jaxpr JAX traces for jax.jit(sgd_step)")
@@ -60,7 +60,7 @@ def main():
     for line in entry.splitlines():
         print(re.sub(r", metadata=\{.*?\}", "", line)[:150])
     n_fusions = len(re.findall(r"\bfusion\(", entry))
-    print(f"\n{len(cf.graph.ops)} Voltax kernels per step vs {n_fusions} XLA fusions (plus a few unfused dots).")
+    print(f"\n{len(cf.graph.ops)} Sentinex kernels per step vs {n_fusions} XLA fusions (plus a few unfused dots).")
 
     banner("5. Caching and retracing")
     step(params, x, y, 0.1)

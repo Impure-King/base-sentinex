@@ -3,10 +3,10 @@
 import jax.numpy as jnp
 import numpy as np
 
-import voltax as vx
-from voltax import ops
-from voltax.graph import KernelStats, function
-from voltax.graph import passes
+import sentinex as sx
+from sentinex import ops
+from sentinex.graph import KernelStats, function
+from sentinex.graph import passes
 
 from helpers import rand, tree_allclose
 
@@ -34,7 +34,7 @@ def test_ops_on_plain_arrays_run_at_trace_time():
 
 def test_constant_folding_and_size_cap():
     # d mean(x)/dx = 1/n everywhere: it depends only on the constant gradient seed.
-    grad_mean = function(vx.grad(lambda x: ops.mean(x)))
+    grad_mean = function(sx.grad(lambda x: ops.mean(x)))
     small = grad_mean.graph(rand((4,)))
     assert small.ops == [] and small.outputs[0].kind == "const"
     np.testing.assert_allclose(grad_mean(rand((4,))), np.full(4, 0.25))
@@ -44,7 +44,7 @@ def test_constant_folding_and_size_cap():
 
 def test_identity_nodes_are_forwarded():
     def f(x):
-        return vx.value_and_grad(lambda y: ops.sum(y * y))(x)
+        return sx.value_and_grad(lambda y: ops.sum(y * y))(x)
 
     traced = function(f, optimize=False).graph(rand((3,)))
     optimized = function(f).graph(rand((3,)))
@@ -54,7 +54,7 @@ def test_identity_nodes_are_forwarded():
 
 def test_optimization_preserves_results():
     def f(x, w):
-        loss, g = vx.value_and_grad(lambda w: ops.sum(ops.tanh(x @ w) ** 2))(w)
+        loss, g = sx.value_and_grad(lambda w: ops.sum(ops.tanh(x @ w) ** 2))(w)
         return loss, g
 
     args = (rand((4, 3)), rand((3, 2), 1))

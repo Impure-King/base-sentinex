@@ -23,8 +23,8 @@ from typing import Any, Sequence
 
 import jax
 
-from voltax.graph import kernels
-from voltax.graph.ir import CONST, INPUT, Graph, Node
+from sentinex.graph import kernels
+from sentinex.graph.ir import CONST, INPUT, Graph, Node
 
 
 class Executable:
@@ -98,7 +98,7 @@ def interpret(graph: Graph, args: Sequence[Any]) -> list[Any]:
 
     With concrete arrays this is plain eager execution. With JAX tracers (inside
     `jax.jit`) it emits one jaxpr for the whole graph, which XLA then compiles and
-    fuses: that is how `vx.function(..., jit_compile=True)` lowers a Voltax graph.
+    fuses: that is how `sx.function(..., jit_compile=True)` lowers a Sentinex graph.
     """
     env: dict[int, Any] = {}
     for node, a in zip(graph.inputs, args):
