@@ -45,9 +45,11 @@ import jax
 import sentinex as sx
 from sentinex import losses, nn, optim, train
 
+# A model is configuration; its parameters are a separate pytree.
 model = nn.Sequential([nn.Dense(512), nn.relu, nn.Dense(10)])
-params = model.init(jax.random.PRNGKey(0), (None, 784))   # None = any batch size
+params = model.init(jax.random.PRNGKey(0), (None, 784))  # None: any batch
 opt = optim.adam(1e-3)
+
 x = jax.random.normal(jax.random.PRNGKey(1), (128, 784))
 y = jax.random.randint(jax.random.PRNGKey(2), (128,), 0, 10)
 
@@ -55,13 +57,14 @@ def loss_fn(params, batch, key):
     x, y = batch
     return losses.cross_entropy(model.apply(params, x), y)
 
-step = train.make_train_step(loss_fn, opt)   # pure: (state, batch) -> (state, metrics)
-step = sx.function(step)                      # or jax.jit(step), or leave it eager
+# A pure step: (state, batch) -> (state, metrics).
+step = train.make_train_step(loss_fn, opt)
+step = sx.function(step)  # graph mode; or jax.jit(step), or eager
 
 state = train.TrainState.create(params, opt)
-state, metrics = step(state, (x, y))          # first call traces; later calls reuse the graph
+state, metrics = step(state, (x, y))  # traces once, then reuses the graph
 
-print(step.graph(state, (x, y)).pretty())     # the Sentinex graph that runs
+print(step.graph(state, (x, y)).pretty())  # the graph that runs
 ```
 
 ## Development
